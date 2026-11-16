@@ -1,0 +1,2105 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Tablero Fuera de Servicio · PRUEBA</title>
+<!-- ============================================================
+     COPIA DE PRUEBA para GitHub Pages + Firebase.
+     PASO OBLIGATORIO: reemplazá los seis "PEGAR_AQUI" de abajo por los
+     datos de TU proyecto de Firebase (ver la guía, parte 1, paso 5).
+     Estos datos no son secretos: la seguridad la dan las reglas de Firestore.
+     ============================================================ -->
+<script>
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBKPsDXvdhmuRXdkf_nXmutPpFcAZJnseA",
+  authDomain: "tablero-prueba.firebaseapp.com",
+  projectId: "tablero-prueba",
+  storageBucket: "tablero-prueba.firebasestorage.app",
+  messagingSenderId: "751354257884",
+  appId: "1:751354257884:web:6dcb35fdac1d9239496f19"
+};
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: barra de salas arriba, resumen por sala, lista de tickets de máquinas (1 col en celular, 2–3 en PC), hoja de carga deslizable */
+:root{
+  --bg:#eef1f4; --surface:#ffffff; --surface-2:#f6f8fa; --line:#d6dce3;
+  --fg:#16202b; --muted:#5b6876; --accent:#0d5c63; --accent-fg:#ffffff; --accent-soft:#d5ebec;
+  --fs:#c0392b; --fs-soft:#fbe4e1; --rep:#b7791f; --rep-soft:#fbefd9; --ok:#2f855a; --ok-soft:#dcf2e5;
+  --shadow:0 1px 2px rgba(22,32,43,.06),0 4px 14px rgba(22,32,43,.06);
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f161c; --surface:#17212a; --surface-2:#1c2833; --line:#2b3a47;
+  --fg:#e6edf2; --muted:#93a3b1; --accent:#4fb3bb; --accent-fg:#07272a; --accent-soft:#163a3e;
+  --fs:#f0766a; --fs-soft:#3a1d1b; --rep:#e5b04f; --rep-soft:#3a2e15; --ok:#5fc48e; --ok-soft:#163324;
+  --shadow:0 1px 2px rgba(0,0,0,.3); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f161c; --surface:#17212a; --surface-2:#1c2833; --line:#2b3a47;
+  --fg:#e6edf2; --muted:#93a3b1; --accent:#4fb3bb; --accent-fg:#07272a; --accent-soft:#163a3e;
+  --fs:#f0766a; --fs-soft:#3a1d1b; --rep:#e5b04f; --rep-soft:#3a2e15; --ok:#5fc48e; --ok-soft:#163324;
+  --shadow:0 1px 2px rgba(0,0,0,.3); color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:12px;padding-block:12px}
+.brand{display:flex;flex-direction:column;min-width:0;flex:1}
+.brand h1{font-family:var(--f-display);font-weight:700;font-size:1.55rem;letter-spacing:.02em;margin:0;line-height:1.05;text-transform:uppercase;text-wrap:balance}
+.brand small{color:var(--muted);font-size:.8rem}
+.live{display:inline-flex;align-items:center;gap:6px}
+.live i{width:7px;height:7px;border-radius:50%;background:var(--ok);display:inline-block}
+.live.off i{background:var(--muted)}
+.rol{margin-left:8px;padding:1px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-weight:600;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 14px;cursor:pointer;font-weight:500;white-space:nowrap}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-weight:600}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--fs);border-color:var(--fs)}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.iconbtn{border:1px solid var(--line);background:var(--surface);border-radius:10px;width:40px;height:40px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+
+main.wrap{padding-block:16px 96px;display:flex;flex-direction:column;gap:16px}
+
+.salas{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.sala{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:10px 12px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:2px;min-width:0}
+.sala .n{font-family:var(--f-display);font-weight:600;font-size:1.05rem;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sala .c{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:1.5rem;font-weight:600;line-height:1.1}
+.sala .c span{font-size:.72rem;color:var(--muted);font-family:var(--f-body);font-weight:500;margin-left:4px}
+.sala .sub{font-size:.75rem;color:var(--muted)}
+.sala[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}
+@media (max-width:760px){.salas{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:minmax(128px,1fr);overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}}
+
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.search{flex:1 1 220px;min-width:0;position:relative}
+.search input{width:100%;padding:10px 12px 10px 36px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:3px;gap:2px}
+.seg button{border:0;background:none;padding:7px 12px;border-radius:8px;cursor:pointer;font-size:.88rem;color:var(--muted);font-weight:500}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
+
+.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+@media (max-width:420px){.list{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);display:grid;grid-template-columns:6px 1fr;overflow:hidden;cursor:pointer;text-align:left;padding:0;width:100%}
+.card:hover{border-color:var(--muted)}
+.card .stripe{background:var(--fs)}
+.card[data-e="rep"] .stripe{background:var(--rep)}
+.card[data-e="ok"] .stripe{background:var(--ok)}
+.card .body{padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.row1{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.num{font-family:var(--f-mono);font-weight:600;font-size:1.35rem;font-variant-numeric:tabular-nums;line-height:1.1;word-break:break-all}
+.num small{display:block;font-family:var(--f-body);font-weight:500;font-size:.78rem;color:var(--muted);word-break:normal;margin-top:2px}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:.74rem;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap;text-transform:uppercase;letter-spacing:.04em;background:var(--fs-soft);color:var(--fs)}
+.chip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.chip[data-e="rep"]{background:var(--rep-soft);color:var(--rep)}
+.chip[data-e="ok"]{background:var(--ok-soft);color:var(--ok)}
+.falla{font-weight:600}
+.falla span{font-weight:400;color:var(--muted)}
+.meta{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.8rem;color:var(--muted)}
+.meta b{color:var(--fg);font-weight:500}
+.tag{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.05em;font-weight:600;font-size:.82rem;color:var(--accent)}
+
+.empty{border:1.5px dashed var(--line);border-radius:14px;padding:32px 20px;text-align:center;color:var(--muted);display:flex;flex-direction:column;gap:10px;align-items:center}
+.empty h2{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.03em;color:var(--fg);margin:0;font-size:1.4rem}
+.empty p{margin:0;max-width:46ch}
+.notice{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:.86rem;color:var(--muted)}
+
+.fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:6;border-radius:999px;padding:14px 20px;box-shadow:0 6px 20px rgba(0,0,0,.2);font-size:1rem}
+@media (min-width:761px){.fab{display:none}}
+@media (max-width:760px){.top .desk{display:none}}
+
+.overlay{position:fixed;inset:0;z-index:20;background:rgba(10,16,22,.5);display:flex;align-items:flex-end;justify-content:center}
+@media (min-width:761px){.overlay{align-items:center}}
+.sheet{background:var(--surface);width:100%;max-width:620px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:18px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:14px}
+@media (min-width:761px){.sheet{border-radius:18px;padding:22px 24px}}
+.sheet h2{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.03em;margin:0;font-size:1.5rem}
+.sheet .head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:480px){.grid2{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field label{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.field input,.field select,.field textarea{border:1px solid var(--line);background:var(--surface-2);border-radius:10px;padding:11px 12px;width:100%;font-size:16px}
+.field textarea{min-height:76px;resize:vertical}
+.estados{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.estados label{border:1px solid var(--line);border-radius:10px;padding:10px 6px;text-align:center;cursor:pointer;font-size:.85rem;font-weight:600;background:var(--surface-2)}
+.estados input{position:absolute;opacity:0;pointer-events:none}
+.estados input:checked + span{color:var(--fs)}
+.estados label:has(input:checked){border-color:currentColor}
+.estados label.e-fs:has(input:checked){background:var(--fs-soft);color:var(--fs);border-color:var(--fs)}
+.estados label.e-rep:has(input:checked){background:var(--rep-soft);color:var(--rep);border-color:var(--rep)}
+.estados label.e-ok:has(input:checked){background:var(--ok-soft);color:var(--ok);border-color:var(--ok)}
+.estados label:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.actions .spacer{flex:1}
+.hist{font-size:.82rem;color:var(--muted);border-top:1px solid var(--line);padding-top:10px;display:flex;flex-direction:column;gap:4px}
+.hist b{color:var(--fg);font-weight:500}
+.confirm{background:var(--fs-soft);border:1px solid var(--fs);border-radius:10px;padding:10px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.9rem}
+
+.fabchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:4px 6px 4px 12px;font-size:.86rem}
+.fabchip button{border:0;background:none;cursor:pointer;color:var(--muted);width:22px;height:22px;border-radius:50%}
+.fabchip button:hover{background:var(--fs-soft);color:var(--fs)}
+.sheet h3{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.05em;font-size:1rem;color:var(--muted);margin:4px 0 0}
+.ulist{display:flex;flex-direction:column;gap:8px}
+.urow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;border:1px solid var(--line);border-radius:12px;padding:8px 10px;background:var(--surface-2)}
+.urow img{width:32px;height:32px;border-radius:50%;flex:none}
+.urow .nm{flex:1 1 140px;min-width:0;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.urow select{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 8px;font-size:15px;max-width:100%}
+.urow .x{border:0;background:none;cursor:pointer;color:var(--muted);width:30px;height:30px;border-radius:50%}
+.urow .x:hover{background:var(--fs-soft);color:var(--fs)}
+.ures{display:flex;flex-direction:column;gap:4px}
+.ures button{display:flex;align-items:center;gap:10px;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 10px;cursor:pointer;text-align:left}
+.ures button img{width:28px;height:28px;border-radius:50%}
+.muted{color:var(--muted);font-size:.88rem;margin:0}
+.sheet.wide{max-width:900px}
+.rtiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+@media (max-width:600px){.rtiles{grid-template-columns:1fr 1fr}}
+.rtile{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface-2);display:flex;flex-direction:column;gap:2px;min-width:0}
+.rl{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.rn{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:1.6rem;font-weight:600;line-height:1.15}
+.rs{font-size:.76rem;color:var(--muted)}
+.rblock{display:flex;flex-direction:column;gap:6px;min-width:0}
+.rgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:600px){.rgrid{grid-template-columns:1fr}}
+.rbar{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 2.5em;gap:8px;align-items:center;font-size:.88rem}
+.rk{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rt{height:10px;border-radius:5px;background:var(--surface-2);overflow:hidden}
+.rt i{display:block;height:100%;background:var(--accent);border-radius:5px}
+.rv{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;color:var(--muted)}
+.rtable{overflow-x:auto}
+.rtable table{border-collapse:collapse;width:100%;font-size:.88rem;font-variant-numeric:tabular-nums}
+.rtable th,.rtable td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.rtable tr>*:first-child{text-align:left}
+.rtable tr:first-child th{font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600}
+.rold{display:grid;grid-template-columns:minmax(0,1fr) auto 5.5em;gap:8px;align-items:center;border:1px solid var(--line);background:var(--surface-2);border-radius:10px;padding:8px 10px;cursor:pointer;text-align:left;font-size:.88rem}
+#roNotice{display:flex;gap:10px;align-items:flex-start}
+#roNotice>span{flex:1;min-width:0}
+.nclose{border:0;background:none;cursor:pointer;color:var(--muted);width:26px;height:26px;border-radius:50%;flex:none}
+.nclose:hover{background:var(--line);color:var(--fg)}
+.vtabs{align-self:flex-start}
+.vtabs button{font-size:.95rem;padding:8px 16px;display:inline-flex;align-items:center;gap:6px}
+.cnt{background:var(--fs);color:#fff;border-radius:999px;font-size:.72rem;font-weight:700;padding:1px 7px;font-family:var(--f-mono)}
+.chip[data-e="mute"]{background:var(--surface-2);color:var(--muted)}
+.chips{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.rqn{font-family:var(--f-body);font-size:1.05rem;word-break:normal}
+.tag.rqtag{color:var(--rep)}
+.salas.una{grid-template-columns:minmax(0,280px)}
+@media (max-width:760px){.salas.una{grid-auto-columns:minmax(0,1fr)}}
+.vaciar{border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:10px}
+.vaciar .field label{text-transform:none;letter-spacing:0;font-size:.9rem;color:var(--fg);font-weight:500;display:flex;gap:8px;align-items:center}
+.vaciar .field label[for]{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.alertas{display:flex;flex-direction:column;gap:6px}
+.alerta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--fs-soft);border:1px solid var(--fs);color:var(--fg);border-radius:10px;padding:9px 12px;font-size:.92rem}
+.alerta svg{color:var(--fs);flex:none}
+.alerta span{flex:1;min-width:0}
+.alerta b{color:var(--fs)}
+.alerta .btn{padding:5px 12px;font-size:.85rem}
+.sala.alarm{border-color:var(--fs);box-shadow:inset 0 0 0 1px var(--fs)}
+.sala.alarm .c{color:var(--fs)}
+.tag.dias{color:var(--fs);font-family:var(--f-body)}
+.fchip{display:inline-flex;align-self:flex-start;align-items:center;gap:6px;background:var(--fs-soft);color:var(--fs);border:1px solid var(--fs);border-radius:999px;padding:4px 6px 4px 12px;font-size:.86rem;font-weight:600}
+.fchip button{border:0;background:none;color:inherit;cursor:pointer;width:22px;height:22px;border-radius:50%}
+.repinfo{background:var(--ok-soft);color:var(--fg);border-radius:8px;padding:6px 10px;font-size:.86rem}
+.repinfo b{color:var(--ok);font-weight:600}
+.spick{display:flex;flex-wrap:wrap;gap:4px}
+.spick button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 10px;font-size:.82rem;cursor:pointer;color:var(--muted)}
+.spick button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);font-weight:600}
+.infcard{border:1px solid var(--ok);background:var(--ok-soft);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;font-size:.9rem}
+.infcard .infh b{color:var(--ok)}
+.infcard .muted{font-size:.82rem}
+.tag.inf{color:var(--ok);font-family:var(--f-body)}
+.alerta.info{background:var(--ok-soft);border-color:var(--ok)}
+.alerta.info svg{color:var(--ok)}
+.alerta.info b{color:var(--ok)}
+.seg.vista button{display:inline-flex;align-items:center;gap:6px}
+@media (max-width:520px){.seg.vista button span{display:none}}
+.list.aslist{display:block;overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.tbl{border-collapse:collapse;width:100%;font-size:.88rem;font-variant-numeric:tabular-nums}
+.tbl th{position:sticky;top:0;background:var(--surface-2);text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl tr:last-child td{border-bottom:0}
+.tbl tbody tr{cursor:pointer;box-shadow:inset 4px 0 0 var(--fs)}
+.tbl tbody tr[data-e="rep"]{box-shadow:inset 4px 0 0 var(--rep)}
+.tbl tbody tr[data-e="ok"]{box-shadow:inset 4px 0 0 var(--ok)}
+.tbl tbody tr[data-e="mute"]{box-shadow:inset 4px 0 0 var(--line)}
+.tbl tbody tr:hover{background:var(--surface-2)}
+.tbl tbody tr:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.tbl .n{font-family:var(--f-mono);font-weight:600;white-space:nowrap}
+.tbl .nw{white-space:nowrap}
+.tbl .sub{display:block;color:var(--muted);font-size:.8rem}
+.tbl .chip{font-size:.66rem;padding:2px 7px}
+.tbl .x{display:flex;flex-direction:column;gap:2px}
+.tbl .x .tag{font-size:.74rem}
+@media (max-width:640px){.tbl .hn{display:none}.tbl{min-width:560px}}
+@media (max-width:760px){.top .wrap{flex-wrap:wrap}.top .brand{flex-basis:100%}.brand h1{font-size:1.35rem}}
+.cnt.amb{background:var(--accent);color:var(--accent-fg)}
+.card[data-e="sec"] .stripe{background:var(--accent)}
+.chip[data-e="sec"]{background:var(--accent-soft);color:var(--accent)}
+.tbl tbody tr[data-e="sec"]{box-shadow:inset 4px 0 0 var(--accent)}
+.estados label.e-sec:has(input:checked){background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.vtabs .sh{display:none}
+@media (max-width:480px){.vtabs .lg{display:none}.vtabs .sh{display:inline}.vtabs button{padding:8px 11px}}
+.envbox{border:1px solid var(--accent);background:var(--accent-soft);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.envbox h3{margin:0;font-family:var(--f-display);text-transform:uppercase;letter-spacing:.05em;font-size:1rem;color:var(--accent)}
+.envbox .field input,.envbox .field select{background:var(--surface)}
+.tag.env{color:var(--accent);font-family:var(--f-body)}
+.uname{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 9px;font-size:15px;flex:1 1 140px;min-width:0}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:30;background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:.9rem;max-width:calc(100% - 32px);box-shadow:var(--shadow)}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(16px);opacity:.6}to{transform:none;opacity:1}}}
+/* padrón */
+.vtabs{max-width:100%;overflow-x:auto;scrollbar-width:none}
+.vtabs button{flex:none}
+.list.padlist{grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+.pgh{grid-column:1/-1;display:flex;align-items:baseline;gap:10px;margin-top:10px;padding-bottom:4px;border-bottom:2px solid var(--line)}
+.pgh h2{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.04em;margin:0;font-size:1.3rem}
+.pgh span{color:var(--muted);font-size:.85rem;font-family:var(--f-mono)}
+.pfabs{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px}
+.pfabs button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:.84rem;cursor:pointer;color:var(--fg)}
+.pfabs button b{font-family:var(--f-mono);margin-left:6px;color:var(--muted);font-weight:600}
+.pfabs button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.pfabs button[aria-pressed="true"] b{color:var(--accent-fg)}
+.list.aslist .pfabs{padding:10px}
+.card.pcard .body{padding:10px 12px;gap:6px}
+.card.pcard .num{font-size:1.15rem}
+.card[data-e="baja"] .stripe{background:var(--line)}
+.card[data-e="baja"]{opacity:.8}
+.tbl tbody tr[data-e="baja"]{box-shadow:inset 4px 0 0 var(--line)}
+.bajabox{border-color:var(--fs)!important;background:var(--fs-soft)!important}
+.bajabox h3{color:var(--fs)!important}
+.imptbl{border-collapse:collapse;width:100%;font-size:.88rem;font-variant-numeric:tabular-nums}
+.imptbl th,.imptbl td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right}
+.imptbl tr>*:first-child{text-align:left}
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <h1>Máquinas fuera de servicio <span style="font-size:.55em;vertical-align:middle;border:1px solid currentColor;border-radius:4px;padding:1px 6px;opacity:.75">PRUEBA</span></h1>
+      <small><span class="live off" id="live"><i></i><span id="liveTxt">Conectando…</span></span> <span id="rol" class="rol" hidden></span></small>
+    </div>
+    <button class="iconbtn" id="btnConfig" hidden title="Nombres de las salas" aria-label="Configurar salas">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
+    <button class="btn" id="btnRep" hidden>Reportes</button>
+    <button class="btn" id="btnUsr" hidden>Usuarios</button>
+    <button class="btn" id="btnSalir" hidden>Salir</button>
+    <button class="btn desk" id="btnCsv" hidden>Exportar CSV</button>
+    <button class="btn desk" id="btnArc" hidden>Archivar</button>
+    <button class="btn primary desk" id="btnNuevaDesk">+ Cargar máquina</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <nav class="seg vtabs" id="vtabs" aria-label="Sección"><button type="button" data-v="maq" aria-pressed="true">Máquinas</button><button type="button" data-v="rq" aria-pressed="false">Repuestos<span class="cnt" id="rqCount" hidden></span></button><button type="button" data-v="sec" aria-pressed="false"><span class="lg">Fallas secundarias</span><span class="sh">Secundarias</span><span class="cnt amb" id="secCount" hidden></span></button><button type="button" data-v="pad" aria-pressed="false" id="tabPad" hidden>Padrón</button></nav>
+  <div class="alertas" id="alertas" hidden></div>
+  <section class="salas" id="salas" aria-label="Filtrar por sala"></section>
+
+  <div class="toolbar">
+    <div class="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Buscar N° de máquina, modelo, falla…" autocomplete="off">
+    </div>
+    <div class="seg vista" role="group" aria-label="Vista">
+      <button type="button" data-vista="tarjetas" aria-pressed="true" title="Ver como tarjetas"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>Tarjetas</span></button>
+      <button type="button" data-vista="lista" aria-pressed="false" title="Ver como lista"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span>Lista</span></button>
+    </div>
+    <div class="seg" role="group" aria-label="Estado">
+      <button data-f="activas" aria-pressed="true">Pendientes</button>
+      <button data-f="ok" aria-pressed="false">Reparadas</button>
+      <button data-f="all" aria-pressed="false">Todas</button>
+    </div>
+    <button type="button" class="btn" id="btnImp" hidden>Importar Excel</button>
+  </div>
+
+  <div class="fchip" id="fViejas" hidden><span id="fViejasT"></span><button type="button" id="fViejasX" aria-label="Quitar filtro">✕</button></div>
+  <div class="notice" id="roNotice" hidden></div>
+  <form class="notice" id="codeForm" hidden novalidate style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end">
+    <div class="field" style="flex:1 1 180px"><label for="codeIn">Código de acceso</label><input id="codeIn" autocomplete="off" maxlength="12" placeholder="Ej. K7Q-2MX" style="text-transform:uppercase;font-family:var(--f-mono)"></div>
+    <button class="btn primary" type="submit">Vincular</button>
+  </form>
+  <div class="notice" id="bootBox" hidden style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+    <span style="flex:1 1 240px">Este tablero todavía no tiene administrador general. Si sos quien lo está instalando, tocá el botón: tu usuario queda como administrador general y el botón desaparece para todos.</span>
+    <button class="btn primary" type="button" id="bootGo">Hacerme administrador general</button>
+  </div>
+
+  <section class="list" id="list" aria-live="polite"></section>
+  <div class="empty" id="empty">
+    <h2 id="emptyT">Sin máquinas fuera de servicio</h2>
+    <p id="emptyP">Cuando el personal de una sala cargue una máquina, aparece acá para todos al instante. Tocá “Cargar máquina” para registrar la primera.</p>
+  </div>
+</main>
+
+<button class="btn primary fab" id="btnNueva">+ Cargar máquina</button>
+
+<div class="overlay" id="ov" hidden>
+  <form class="sheet" id="form" novalidate>
+    <div class="head">
+      <h2 id="formT">Cargar máquina</h2>
+      <button type="button" class="iconbtn" id="btnCerrar" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="notice" id="formNote" hidden></div>
+    <div id="infBox" class="ulist" hidden></div>
+    <div class="grid2">
+      <div class="field"><label for="fSala">Sala</label><select id="fSala" required></select></div>
+      <div class="field"><label for="fFab">Fabricante</label><select id="fFab"></select><input id="fFabNew" placeholder="Nombre del fabricante nuevo" maxlength="40" autocomplete="off" hidden></div>
+      <div class="field"><label for="fMod">Modelo de slot</label><select id="fMod"></select><input id="fModNew" placeholder="Nombre del modelo nuevo" maxlength="50" autocomplete="off" hidden></div>
+      <div class="field"><label for="fNum">N° de máquina</label><select id="fNumSel" hidden aria-label="N° de máquina del padrón"></select><input id="fNum" required inputmode="text" placeholder="Ej. 1042" autocomplete="off"></div>
+      <div class="field"><label for="fUbi">Isla / posición</label><input id="fUbi" placeholder="Ej. Isla 7 · Pos. 3"></div>
+      <div class="field"><label for="fFalla">Tipo de falla</label><select id="fFalla"></select></div>
+    </div>
+    <div class="field"><label for="fDet">Detalle de la falla</label><textarea id="fDet" placeholder="Qué pasa, código de error, desde cuándo…"></textarea></div>
+    <div class="field">
+      <label>Estado</label>
+      <div class="estados">
+        <label class="e-fs"><input type="radio" name="estado" id="eFs" value="fs" checked><span>Fuera de servicio</span></label>
+        <label class="e-rep"><input type="radio" name="estado" id="eRep" value="rep"><span>En reparación</span></label>
+        <label class="e-ok"><input type="radio" name="estado" id="eOk" value="ok"><span>Reparada</span></label>
+      </div>
+    </div>
+    <div id="repBox" class="envbox" hidden>
+      <h3>Detalle de la reparación</h3>
+      <div class="field"><label for="fDiag">Diagnóstico</label><textarea id="fDiag" maxlength="1000" placeholder="Qué se encontró: causa de la falla, componente dañado…"></textarea></div>
+      <div class="field"><label for="fProc">Procedimiento de reparación (paso a paso)</label><textarea id="fProc" rows="4" maxlength="1500" placeholder="1. Revisé…&#10;2. Cambié…&#10;3. Probé…"></textarea><span class="muted" style="font-size:.8rem">Enumerá cada paso en una línea. Mínimo 2 pasos.</span></div>
+      <div class="field">
+        <label>¿Se usó repuesto?</label>
+        <div class="estados" style="grid-template-columns:1fr 1fr">
+          <label class="e-sec"><input type="radio" name="fUso" id="fUsoSi" value="si"><span>Sí, se usó repuesto</span></label>
+          <label class="e-ok"><input type="radio" name="fUso" id="fUsoNo" value="no"><span>No fue necesario</span></label>
+        </div>
+        <input id="fRep" maxlength="120" placeholder="Qué repuesto se usó" hidden>
+      </div>
+      <p class="muted" id="repBoxNote">Todo obligatorio para marcar la máquina como reparada.</p>
+    </div>
+    <div class="grid2">
+      <div class="field"><label for="fTec">Técnico asignado</label><input id="fTec" placeholder="Nombre"></div>
+      <div class="field"><label for="fObs">Observaciones</label><input id="fObs" placeholder="Repuesto pedido, etc."></div>
+    </div>
+    <div class="confirm" id="confirmDel" hidden>¿Borrar esta máquina del tablero? <span style="flex:1"></span><button type="button" class="btn" id="delNo">Cancelar</button><button type="button" class="btn danger" id="delSi">Sí, borrar</button></div>
+    <div class="actions">
+      <button type="button" class="btn danger" id="btnBorrar" hidden>Borrar</button>
+      <button type="button" class="btn" id="btnPedirMaq" hidden>Pedir repuesto</button>
+      <button type="button" class="btn" id="btnInfMaq" hidden>Informar reparación</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn" id="btnCancelar">Cancelar</button>
+      <button type="submit" class="btn primary" id="btnGuardar">Guardar</button>
+    </div>
+    <div class="hist" id="hist" hidden></div>
+  </form>
+</div>
+
+<div class="overlay" id="ovCfg" hidden>
+  <form class="sheet" id="formCfg">
+    <div class="head"><h2>Configuración</h2><button type="button" class="iconbtn" id="cfgCerrar" aria-label="Cerrar">✕</button></div>
+    <p style="margin:0;color:var(--muted);font-size:.9rem">Poné el nombre de cada una de las 5 localidades. Lo ven todos los usuarios.</p>
+    <div id="cfgFields" style="display:flex;flex-direction:column;gap:10px"></div>
+    <h2 style="font-size:1.2rem;margin-top:6px">Fabricantes</h2>
+    <div id="cfgFabs" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    <div style="display:flex;gap:8px"><div class="field" style="flex:1"><label for="cfgFabNew">Agregar fabricante</label><input id="cfgFabNew" maxlength="40" placeholder="Nombre" autocomplete="off"></div><button type="button" class="btn" id="cfgFabAdd" style="align-self:flex-end">Agregar</button></div>
+    <h2 style="font-size:1.2rem;margin-top:6px">Modelos de slot</h2>
+    <div class="field"><label for="cfgModFab">Fabricante</label><select id="cfgModFab"></select></div>
+    <div id="cfgMods" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    <div style="display:flex;gap:8px"><div class="field" style="flex:1"><label for="cfgModNew">Agregar modelo</label><input id="cfgModNew" maxlength="50" placeholder="Ej. Buffalo Gold" autocomplete="off"></div><button type="button" class="btn" id="cfgModAdd" style="align-self:flex-end">Agregar</button></div>
+    <div class="actions"><button type="button" class="btn" id="cfgCancel">Cancelar</button><button class="btn primary" type="submit">Guardar configuración</button></div>
+    <h2 style="font-size:1.2rem;margin-top:6px">Alertas</h2>
+    <div class="grid2">
+      <div class="field"><label for="alMaq">Alertar si una sala tiene más de</label><div style="display:flex;gap:8px;align-items:center"><input id="alMaq" type="number" min="1" max="99" inputmode="numeric" style="max-width:90px"><span class="muted">máquinas pendientes</span></div></div>
+      <div class="field"><label for="alDias">Alertar si una máquina lleva más de</label><div style="display:flex;gap:8px;align-items:center"><input id="alDias" type="number" min="1" max="365" inputmode="numeric" style="max-width:90px"><span class="muted">días sin solución</span></div></div>
+    </div>
+    <div class="vaciar">
+      <h2 style="font-size:1.2rem">Datos de prueba</h2>
+      <p class="muted">Carga máquinas, padrón, repuestos, fallas secundarias y un informe inventados, repartidos en las 5 salas, para probar el tablero sin usar datos reales. “Borrar datos de prueba” quita solo lo que cargó este botón.</p>
+      <div class="actions" style="justify-content:flex-start"><button type="button" class="btn" id="demoGo">Cargar datos de prueba</button><button type="button" class="btn" id="demoDel">Borrar datos de prueba</button><span class="muted" id="demoInfo"></span></div>
+      <h2 style="font-size:1.2rem">Vaciar tablero</h2>
+      <p class="muted">Borra las máquinas, los pedidos de repuestos y las fallas secundarias de las 5 salas, por ejemplo después de las pruebas. Usuarios, salas, fabricantes y modelos se mantienen. No se puede deshacer: exportá antes los archivos.</p>
+      <div class="actions" style="justify-content:flex-start"><button type="button" class="btn" id="vxMaq">1. Exportar máquinas</button><button type="button" class="btn" id="vxRq">2. Exportar repuestos</button><button type="button" class="btn" id="vxSec">3. Exportar fallas secundarias</button></div>
+      <div class="field"><label><input type="checkbox" id="vcMaq" checked> Borrar máquinas (<span id="vnMaq">0</span>)</label><label><input type="checkbox" id="vcRq" checked> Borrar pedidos de repuestos (<span id="vnRq">0</span>)</label><label><input type="checkbox" id="vcSec" checked> Borrar fallas secundarias (<span id="vnSec">0</span>)</label></div>
+      <div class="field"><label for="vConf">Para confirmar, escribí BORRAR</label><input id="vConf" autocomplete="off" maxlength="10"></div>
+      <div class="actions" style="justify-content:flex-start"><button type="button" class="btn danger" id="vGo" disabled>Vaciar tablero</button><span class="muted" id="vInfo"></span></div>
+    </div>
+  </form>
+</div>
+
+<div class="overlay" id="ovArc" hidden>
+  <form class="sheet" id="formArc">
+    <div class="head"><h2>Exportar y archivar</h2><button type="button" class="iconbtn" id="arcCerrar" aria-label="Cerrar">✕</button></div>
+    <p style="margin:0;color:var(--muted);font-size:.92rem">Se descarga un CSV con las máquinas reparadas más antiguas y, solo después de que guardes el archivo, se borran del tablero. Las pendientes nunca se borran.</p>
+    <div class="field"><label for="arcDias">Archivar reparadas hace más de</label>
+      <select id="arcDias"><option value="30">30 días</option><option value="90" selected>3 meses</option><option value="180">6 meses</option><option value="365">1 año</option></select>
+    </div>
+    <div class="notice" id="arcInfo"></div>
+    <div class="actions"><button type="button" class="btn" id="arcCancel">Cancelar</button><button class="btn primary" type="submit" id="arcGo">Exportar y borrar</button></div>
+  </form>
+</div>
+
+<div class="overlay" id="ovUsr" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="usrT">
+    <div class="head"><h2 id="usrT">Usuarios y salas</h2><button type="button" class="iconbtn" id="usrCerrar" aria-label="Cerrar">✕</button></div>
+    <p class="muted">Cada persona entra a esta página e inicia sesión con Google o con su mail. Después cargá acá su nombre: la app te da un código que la persona ingresa una sola vez. También podés asignar directamente a quienes ya entraron (aparecen abajo). Los cambios se guardan al instante y los permisos los controla Firebase.</p>
+    <form id="usrAdd" class="ulist" novalidate>
+      <h3>Agregar persona</h3>
+      <div class="grid2">
+        <div class="field"><label for="uNom">Nombre</label><input id="uNom" maxlength="60" autocomplete="off" placeholder="Ej. Laura Gómez"></div>
+        <div class="field"><label for="uRol">Perfil</label><select id="uRol"></select></div>
+        <div class="field"><label>Salas (podés elegir varias)</label><div id="uSalaBox"></div></div>
+      </div>
+      <div class="actions"><button class="btn primary" type="submit">Agregar persona</button></div>
+    </form>
+    <div class="confirm" id="usrCode" hidden style="background:var(--accent-soft);border-color:var(--accent)"></div>
+    <h3 id="usrPendT" hidden>Entraron al tablero y no tienen sala</h3>
+    <div class="ulist" id="usrPend"></div>
+    <h3>Asignados</h3>
+    <div class="ulist" id="usrList"></div>
+  </div>
+</div>
+
+<div class="overlay" id="ovRep" hidden>
+  <div class="sheet wide" role="dialog" aria-labelledby="repT">
+    <div class="head"><h2 id="repT">Reportes</h2><button type="button" class="iconbtn" id="repCerrar" aria-label="Cerrar">✕</button></div>
+    <div class="seg" id="repTipo" role="group" aria-label="Tipo de reporte" style="align-self:flex-start"><button type="button" data-rt="maq" aria-pressed="true">Máquinas fuera de servicio</button><button type="button" data-rt="sec" aria-pressed="false">Fallas secundarias</button></div>
+    <div class="grid2">
+      <div class="field"><label for="repSala">Sala</label><select id="repSala"></select></div>
+      <div class="field"><label for="repDias">Período</label><select id="repDias"><option value="7">Últimos 7 días</option><option value="30" selected>Últimos 30 días</option><option value="90">Últimos 3 meses</option><option value="365">Último año</option></select></div>
+    </div>
+    <div id="repBody" style="display:flex;flex-direction:column;gap:16px"></div>
+  </div>
+</div>
+
+<div class="overlay" id="ovRq" hidden>
+  <form class="sheet" id="formRq" novalidate>
+    <div class="head"><h2 id="rqT">Pedir repuesto</h2><button type="button" class="iconbtn" id="rqCerrar" aria-label="Cerrar">✕</button></div>
+    <div class="notice" id="rqNote" hidden></div>
+    <div class="grid2">
+      <div class="field"><label for="rqSala">Sala</label><select id="rqSala"></select></div>
+      <div class="field"><label for="rqNum">N° de máquina</label><input id="rqNum" list="dlMaq" autocomplete="off" placeholder="Ej. 1042"><datalist id="dlMaq"></datalist></div>
+      <div class="field"><label for="rqTipo">Tipo de repuesto</label><select id="rqTipo"></select></div>
+      <div class="field"><label for="rqCant">Cantidad</label><input id="rqCant" type="number" min="1" max="99" value="1" inputmode="numeric"></div>
+    </div>
+    <div class="field"><label for="rqDet">Detalle</label><textarea id="rqDet" placeholder="Modelo o código del repuesto, qué se rompió…"></textarea></div>
+    <div class="field">
+      <label>Prioridad</label>
+      <div class="estados" style="grid-template-columns:1fr 1fr">
+        <label class="e-ok"><input type="radio" name="rqUrg" id="rqUrgNo" value="0" checked><span>Normal</span></label>
+        <label class="e-fs"><input type="radio" name="rqUrg" id="rqUrgSi" value="1"><span>Urgente</span></label>
+      </div>
+    </div>
+    <div id="rqEnv" class="envbox" hidden>
+      <h3>Envío</h3>
+      <div class="grid2">
+        <div class="field"><label for="envEstado">Estado del envío</label><select id="envEstado"><option value="pedido">En preparación / pedido al proveedor</option><option value="enviado">Enviado</option></select></div>
+        <div class="field"><label for="envFecha">Fecha y hora de envío</label><input id="envFecha" type="datetime-local"></div>
+        <div class="field"><label for="envMedio">Medio de envío</label><input id="envMedio" maxlength="60" list="dlMedio" placeholder="Ej. comisionista, transporte, en mano"><datalist id="dlMedio"><option value="Comisionista"><option value="Transporte / encomienda"><option value="Correo"><option value="En mano (técnico)"><option value="Vehículo de la empresa"></datalist></div>
+        <div class="field"><label for="envRemito">N° de remito o guía</label><input id="envRemito" maxlength="40" autocomplete="off"></div>
+      </div>
+      <div class="field"><label for="envNota">Nota del envío</label><input id="envNota" maxlength="200" placeholder="Qué se envió, si va completo, fecha estimada de llegada…"></div>
+      <p class="muted" id="envInfo" hidden></p>
+    </div>
+    <div id="rqGest" class="grid2" hidden>
+      <div class="field"><label for="rqEstado">Estado del pedido</label><select id="rqEstado"></select></div>
+      <div class="field"><label for="rqNota">Nota de seguimiento</label><input id="rqNota" maxlength="200" placeholder="Proveedor, N° de orden, fecha estimada…"></div>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn danger" id="rqCancelar" hidden>Cancelar pedido</button>
+      <button type="button" class="btn danger" id="rqBorrar" hidden>Borrar</button>
+      <button type="button" class="btn primary" id="rqRecibido" hidden>Confirmar recibido</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn" id="rqCerrar2">Cerrar</button>
+      <button type="submit" class="btn primary" id="rqGuardar">Enviar pedido</button>
+    </div>
+    <div class="hist" id="rqHist" hidden></div>
+  </form>
+</div>
+
+<div class="overlay" id="ovInf" hidden>
+  <form class="sheet" id="formInf" novalidate>
+    <div class="head"><h2 id="infT">Informar reparación</h2><button type="button" class="iconbtn" id="infCerrar" aria-label="Cerrar">✕</button></div>
+    <p class="muted" id="infIntro">Queda como aviso para el personal de la sala. La máquina sigue pendiente hasta que el asistente o el administrador de la sala confirme que está reparada.</p>
+    <div class="grid2">
+      <div class="field"><label for="infSala">Sala</label><select id="infSala"></select></div>
+      <div class="field"><label for="infNum" id="infNumL">N° de máquina</label><select id="infNum"></select></div>
+      <div class="field"><label for="infHora">Fecha y hora de la reparación</label><input id="infHora" type="datetime-local"></div>
+    </div>
+    <div class="field"><label for="infTrab">Procedimiento de reparación (paso a paso)</label><textarea id="infTrab" rows="5" placeholder="1. Revisé…&#10;2. Cambié…&#10;3. Probé…"></textarea><span class="muted" style="font-size:.8rem">Enumerá cada paso en una línea. Mínimo 2 pasos.</span></div>
+    <div class="field">
+      <label>¿Usaste repuesto?</label>
+      <div class="estados" style="grid-template-columns:1fr 1fr">
+        <label class="e-sec"><input type="radio" name="infUso" id="infUsoSi" value="si"><span>Sí, usé repuesto</span></label>
+        <label class="e-ok"><input type="radio" name="infUso" id="infUsoNo" value="no"><span>No fue necesario</span></label>
+      </div>
+      <input id="infRep" maxlength="120" placeholder="Qué repuesto usaste (ej. placa de billetero)" hidden>
+    </div>
+    <div class="actions"><span class="spacer"></span><button type="button" class="btn" id="infCancel">Cancelar</button><button class="btn primary" type="submit" id="infGo">Enviar informe</button></div>
+  </form>
+</div>
+
+<div class="overlay" id="ovSec" hidden>
+  <form class="sheet" id="formSec" novalidate>
+    <div class="head"><h2 id="secT">Cargar falla secundaria</h2><button type="button" class="iconbtn" id="secCerrar" aria-label="Cerrar">✕</button></div>
+    <p class="muted" id="secIntro">Fallas que no impiden que la máquina funcione pero hay que resolver: monitor superior, topper, cerraduras, botones, iluminación, faltantes.</p>
+    <div class="notice" id="secNote" hidden></div>
+    <div id="secInfBox" class="ulist" hidden></div>
+    <div class="grid2">
+      <div class="field"><label for="secSala">Sala</label><select id="secSala"></select></div>
+      <div class="field"><label for="secNum">N° de máquina</label><input id="secNum" list="dlSec" autocomplete="off" placeholder="Ej. 1042"><datalist id="dlSec"></datalist></div>
+      <div class="field"><label for="secFab">Fabricante</label><select id="secFab"></select></div>
+      <div class="field"><label for="secMod">Modelo de slot</label><select id="secMod"></select></div>
+      <div class="field"><label for="secTipo">Tipo de falla secundaria</label><select id="secTipo"></select></div>
+      <div class="field"><label for="secUbi">Isla / posición</label><input id="secUbi" maxlength="40" placeholder="Ej. Isla 7 · Pos. 3"></div>
+    </div>
+    <div class="field"><label for="secDet">Detalle</label><textarea id="secDet" placeholder="Qué no funciona o qué falta…"></textarea></div>
+    <div class="field">
+      <label>Estado</label>
+      <div class="estados" style="grid-template-columns:1fr 1fr">
+        <label class="e-sec"><input type="radio" name="secEst" id="secEstP" value="pend" checked><span>Activa</span></label>
+        <label class="e-ok"><input type="radio" name="secEst" id="secEstS" value="ok"><span>Solucionada</span></label>
+      </div>
+    </div>
+    <div class="confirm" id="secDelC" hidden>¿Borrar esta falla secundaria? <span style="flex:1"></span><button type="button" class="btn" id="secDelNo">Cancelar</button><button type="button" class="btn danger" id="secDelSi">Sí, borrar</button></div>
+    <div class="actions">
+      <button type="button" class="btn danger" id="secBorrar" hidden>Borrar</button>
+      <button type="button" class="btn" id="secInfBtn" hidden>Informar solucionada</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn" id="secCancel">Cerrar</button>
+      <button type="submit" class="btn primary" id="secGo">Guardar</button>
+    </div>
+  </form>
+</div>
+
+<div class="overlay" id="ovPad" hidden>
+  <form class="sheet" id="formPad" novalidate>
+    <div class="head"><h2 id="padT">Agregar máquina al padrón</h2><button type="button" class="iconbtn" id="padCerrar" aria-label="Cerrar">✕</button></div>
+    <div class="notice" id="padNote" hidden></div>
+    <div class="grid2">
+      <div class="field"><label for="pSala">Sala</label><select id="pSala"></select></div>
+      <div class="field"><label for="pNum">N° de máquina</label><input id="pNum" autocomplete="off" placeholder="Ej. 1042"></div>
+      <div class="field"><label for="pFab">Fabricante</label><select id="pFab"></select><input id="pFabNew" placeholder="Nombre del fabricante nuevo" maxlength="40" autocomplete="off" hidden></div>
+      <div class="field"><label for="pMod">Modelo de slot</label><select id="pMod"></select><input id="pModNew" placeholder="Nombre del modelo nuevo" maxlength="50" autocomplete="off" hidden></div>
+      <div class="field"><label for="pJuego">Juego</label><input id="pJuego" maxlength="60" autocomplete="off" placeholder="Ej. Buffalo Gold"></div>
+      <div class="field"><label for="pUbi">Isla / posición</label><input id="pUbi" maxlength="40" placeholder="Ej. Isla 7 · Pos. 3"></div>
+      <div class="field"><label for="pSerie">N° de serie</label><input id="pSerie" maxlength="40" autocomplete="off"></div>
+      <div class="field"><label for="pAlta">Fecha de alta</label><input id="pAlta" type="date"></div>
+      <div class="field"><label for="pObs">Observaciones</label><input id="pObs" maxlength="200"></div>
+    </div>
+    <div class="envbox bajabox" id="pBajaBox" hidden>
+      <h3>Dar de baja</h3>
+      <div class="grid2">
+        <div class="field"><label for="pMot">Motivo</label><select id="pMot"></select></div>
+        <div class="field"><label for="pFecha">Fecha de baja</label><input id="pFecha" type="date"></div>
+      </div>
+      <div class="field"><label for="pMotDet">Detalle</label><input id="pMotDet" maxlength="200" placeholder="A qué sala se trasladó, qué máquina la reemplaza…"></div>
+      <div class="actions"><button type="button" class="btn" id="pBajaNo">Cancelar</button><button type="button" class="btn danger" id="pBajaSi">Confirmar baja</button></div>
+    </div>
+    <div class="confirm" id="pDelC" hidden>¿Borrar esta máquina del padrón sin dejar registro? Usalo solo si se cargó por error. <span style="flex:1"></span><button type="button" class="btn" id="pDelNo">Cancelar</button><button type="button" class="btn danger" id="pDelSi">Sí, borrar</button></div>
+    <div class="actions">
+      <button type="button" class="btn danger" id="pBorrar" hidden>Borrar</button>
+      <button type="button" class="btn danger" id="pBaja" hidden>Dar de baja</button>
+      <button type="button" class="btn" id="pReact" hidden>Reactivar</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn" id="pCancel">Cerrar</button>
+      <button type="submit" class="btn primary" id="pGo">Guardar</button>
+    </div>
+    <div class="hist" id="pHist" hidden></div>
+  </form>
+</div>
+
+<div class="overlay" id="ovImp" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="impT">
+    <div class="head"><h2 id="impT">Importar padrón</h2><button type="button" class="iconbtn" id="impCerrar" aria-label="Cerrar">✕</button></div>
+    <p class="muted">Una fila por máquina con las columnas <b>Sala</b>, <b>N° máquina</b>, <b>Fabricante</b> y <b>Modelo</b> (opcionales: <b>Juego</b>, <b>Isla / posición</b> y <b>N° de serie</b>). También sirve una hoja por sala, con el nombre de la sala como nombre de la hoja. Las máquinas que ya están activas en el padrón se saltean.</p>
+    <div class="actions" style="justify-content:flex-start"><button type="button" class="btn" id="impPlantilla">Descargar planilla modelo</button></div>
+    <div class="field"><label for="impFile">Archivo (.xlsx, .xls o .csv)</label><input id="impFile" type="file" accept=".xlsx,.xls,.csv"></div>
+    <div id="impRes" class="rblock" hidden></div>
+    <div class="actions"><span class="spacer"></span><button type="button" class="btn" id="impCancel">Cancelar</button><button type="button" class="btn primary" id="impGo" disabled>Importar</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="ovLogin" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="loginT">
+    <div class="head"><h2 id="loginT">Ingresar al tablero</h2></div>
+    <p class="muted">Copia de prueba. Ingresá con tu cuenta de Google o con mail y contraseña. Después el administrador general te asigna un perfil o te pasa un código de acceso.</p>
+    <div class="actions" style="justify-content:flex-start"><button type="button" class="btn primary" id="lgGoogle">Ingresar con Google</button></div>
+    <form id="lgForm" novalidate>
+      <h3 id="lgT">O con mail y contraseña</h3>
+      <div class="field" id="lgNomBox" hidden><label for="lgNom">Tu nombre y apellido</label><input id="lgNom" maxlength="60" autocomplete="name"></div>
+      <div class="field"><label for="lgMail">Mail</label><input id="lgMail" type="email" autocomplete="email"></div>
+      <div class="field"><label for="lgPass">Contraseña (6 caracteres o más)</label><input id="lgPass" type="password" autocomplete="current-password"></div>
+      <div class="actions"><button type="button" class="btn" id="lgModo">Crear cuenta nueva</button><button type="button" class="btn" id="lgReset">Olvidé mi contraseña</button><span class="spacer"></span><button class="btn primary" type="submit" id="lgGo">Ingresar</button></div>
+    </form>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+const DEFAULT_SALAS=["Sala 1","Sala 2","Sala 3","Sala 4","Sala 5"];
+const DEFAULT_FABS=["Ainsworth","Aristocrat","Bally","IGT","Interblock","Konami","Novomatic","Scientific Games","WMS","Zitro"];
+const FALLAS=["Billetero","Impresora de tickets","Pantalla / touch","Botonera","Comunicación / sistema","Sin energía","Error de juego / RAM","Puerta / cerradura","Otra"];
+const ESTADO={fs:"Fuera de servicio",rep:"En reparación",ok:"Reparada"};
+const ROLES={admin_sala:"Administrador de sala",asistente:"Asistente de sala",supervisor:"Supervisor (ve todas, sin editar)",tecnico:"Técnico (solo lectura)"};
+const sinSala=r=>r==="tecnico"||r==="supervisor";
+const S={ocultos:[],pad:[],padReady:false,padFab:null,sec:[],vista:(()=>{try{return localStorage.getItem("fs-vista")==="lista"?"lista":"tarjetas"}catch(e){return"tarjetas"}})(),inf:[],informadas:false,al:{maq:5,dias:10},viejas:false,v:"maq",rq:[],personas:[],miH:null,modelos:[],fabs:DEFAULT_FABS.slice(),maq:[],salas:DEFAULT_SALAS.slice(),sala:"all",f:"activas",q:"",uid:null,owner:false,general:false,ro:false,asig:{},asigLoaded:false,visitas:[],editId:null,ready:false,salaInit:false};
+let db=null,user=null,downloads=null,auth=null;
+Object.assign(S,{genLoaded:false,sinGeneral:false,generales:[],perf:{},usrAll:{},miUsr:null});
+const $=id=>document.getElementById(id);
+const el=(t,c,txt)=>{const e=document.createElement(t);if(c)e.className=c;if(txt!=null)e.textContent=txt;return e};
+let tt;function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,3400)}
+const fmt=ts=>{if(!ts)return"—";const d=new Date(ts);return d.toLocaleDateString("es-AR",{day:"2-digit",month:"2-digit"})+" "+d.toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"})};
+function hace(ts){if(!ts)return"";const m=Math.round((Date.now()-ts)/60000);if(m<1)return"recién";if(m<60)return"hace "+m+" min";const h=Math.round(m/60);if(h<48)return"hace "+h+" h";return"hace "+Math.round(h/24)+" días"}
+FALLAS.forEach(f=>$("fFalla").append(new Option(f,f)));
+
+/* --- perfiles --- */
+const normMail=m=>String(m||"").trim().toLowerCase();
+function miAsig(){return S.miUsr||null}
+function rol(){if(!S.genLoaded)return"cargando";if(S.general)return"general";const a=miAsig();if(!a)return S.asigLoaded?"sinasig":"cargando";return a.rol}
+function miSalas(){const a=miAsig();if(!a)return[];if(Array.isArray(a.salas)&&a.salas.length)return [...new Set(a.salas.map(Number))].filter(n=>n>=0&&n<5).sort();return a.sala!=null?[Number(a.sala)]:[]}
+function miSala(){const l=miSalas();return l.length?l[0]:null}
+const esMiSala=n=>miSalas().includes(Number(n));
+const nombresMisSalas=()=>miSalas().map(salaName).join(" + ");
+const deSala=r=>r==="admin_sala"||r==="asistente";
+function puedeCargar(){const r=rol();return !!db&&(r==="general"||(deSala(r)&&miSala()!=null))}
+function puedeEditar(m){const r=rol();return !!db&&(r==="general"||(deSala(r)&&esMiSala(m.sala)))}
+function puedeBorrar(m){const r=rol();return !!db&&(r==="general"||(r==="admin_sala"&&esMiSala(m.sala)))}
+function puedeArchivar(){const r=rol();return !!db&&!!downloads&&(r==="general"||(r==="admin_sala"&&miSala()!=null))}
+
+const diasParada=m=>m.estado!=="ok"&&m.creado?Math.floor((Date.now()-m.creado)/864e5):0;
+const esVieja=m=>m.estado!=="ok"&&diasParada(m)>S.al.dias;
+const TRI='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 21h20L12 3z"/><path d="M12 10v5M12 18v.01"/></svg>';
+function renderAlertas(){
+  const box=$("alertas");box.innerHTML="";
+  if(S.v==="pad"){box.hidden=true;$("fViejas").hidden=true;return}
+  if(S.ready&&S.v==="rq"){
+    const L=S.rq.filter(x=>enAlcance(x)&&puedeRecibir(x)&&rol()!=="general");
+    if(L.length){const d=el("div","alerta info");d.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h13v10H3zM16 10h4l1 3v4h-5"/><circle cx="7" cy="18" r="1.5"/><circle cx="17" cy="18" r="1.5"/></svg>';const t=el("span");t.append(el("b",null,L.length===1?"1 repuesto enviado":L.length+" repuestos enviados")," "+(L.length===1?"espera":"esperan")+" que confirmes el recibido.");d.append(t);if(L.length===1){const bb=el("button","btn","Abrir");bb.type="button";bb.onclick=()=>openRq(L[0]);d.append(bb)}box.append(d)}
+    box.hidden=!box.children.length;$("fViejas").hidden=true;return;
+  }
+  if(S.ready&&S.v==="sec"){
+    const L=S.sec.filter(x=>enAlcance(x)&&secAbierta(x)&&secInfPend(x).length);
+    if(L.length){const d=el("div","alerta info");d.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>';const t=el("span");t.append(el("b",null,L.length===1?"1 falla secundaria":L.length+" fallas secundarias")," "+(L.length===1?"tiene":"tienen")+" informe del técnico, esperando confirmación.");d.append(t);const b=el("button","btn",S.secInf?"Ver todas":"Ver cuáles");b.type="button";b.onclick=()=>{S.secInf=!S.secInf;if(S.secInf)S.f="activas";renderAll()};d.append(b);box.append(d)}
+    else S.secInf=false;
+    box.hidden=!box.children.length;$("fViejas").hidden=!S.secInf;$("fViejasT").textContent="Mostrando solo fallas secundarias con informe del técnico";return;
+  }
+  if(!S.ready||S.v!=="maq"){box.hidden=true;return}
+  const sv=salaVisible(),salas=sv!=null?sv:S.salas.map((n,i)=>i);
+  salas.forEach(i=>{const n=S.maq.filter(m=>Number(m.sala)===i&&m.estado!=="ok").length;if(n>S.al.maq){const d=el("div","alerta");d.innerHTML=TRI;const t=el("span");t.append(el("b",null,salaName(i))," tiene "+n+" máquinas pendientes (el límite es "+S.al.maq+").");d.append(t);const b=el("button","btn","Ver");b.type="button";b.onclick=()=>{S.viejas=false;S.f="activas";S.sala=String(i);renderAll()};if(!sv||sv.length>1)d.append(b);box.append(d)}});
+  const vj=S.maq.filter(m=>enAlcance(m)&&esVieja(m));
+  if(vj.length){const d=el("div","alerta");d.innerHTML=TRI;const t=el("span");t.append(el("b",null,vj.length===1?"1 máquina":vj.length+" máquinas")," "+(vj.length===1?"lleva":"llevan")+" más de "+S.al.dias+" días sin solución.");d.append(t);const b=el("button","btn",S.viejas?"Ver todas":"Ver cuáles");b.type="button";b.onclick=()=>{S.viejas=!S.viejas;if(S.viejas){S.informadas=false;S.f="activas";if(!sv||sv.length>1)S.sala="all"}renderAll()};d.append(b);box.append(d)}
+  const inf=S.maq.filter(m=>enAlcance(m)&&m.estado!=="ok"&&infPend(m).length);
+  if(inf.length){const d=el("div","alerta info");d.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>';const t=el("span");t.append(el("b",null,inf.length===1?"1 máquina":inf.length+" máquinas")," "+(inf.length===1?"tiene":"tienen")+" informe de reparación del técnico, esperando confirmación.");d.append(t);const b=el("button","btn",S.informadas?"Ver todas":"Ver cuáles");b.type="button";b.onclick=()=>{S.informadas=!S.informadas;if(S.informadas){S.viejas=false;S.f="activas";if(!sv||sv.length>1)S.sala="all"}renderAll()};d.append(b);box.append(d)}
+  else S.informadas=false;
+  box.hidden=!box.children.length;
+  const fc=$("fViejas");fc.hidden=!((S.viejas||S.informadas)&&S.v==="maq");$("fViejasT").textContent=S.informadas?"Mostrando solo máquinas con informe del técnico":"Mostrando solo más de "+S.al.dias+" días sin solución";
+}
+$("fViejasX").onclick=()=>{S.viejas=false;S.informadas=false;S.secInf=false;renderAll()};
+const repTs=m=>m.reparada||m.actualizado||0;
+const diasSin=m=>m.creado?Math.max(0,(repTs(m)-m.creado)/864e5):null;
+function diasTxt(d){if(d==null)return"—";if(d<1){const h=Math.round(d*24);return h<1?"menos de 1 hora":h+(h===1?" hora":" horas")}const r=Math.round(d*10)/10;return String(r).replace(".",",")+(r===1?" día":" días")}
+function salaVisible(){const r=rol();return deSala(r)&&miSalas().length?miSalas():null}
+const enAlcance=x=>{const v=salaVisible();return v==null||v.includes(Number(x.sala))};
+function salaName(i){return S.salas[i]||("Sala "+(Number(i)+1))}
+function fillSalaSelect(){const s=$("fSala"),v=s.value;s.innerHTML="";S.salas.forEach((n,i)=>s.append(new Option(n,String(i))));if(v)s.value=v}
+
+const sortFabs=a=>[...new Set(a.map(x=>String(x).trim()).filter(Boolean))].sort((x,y)=>x.localeCompare(y,"es"));
+function fillFab(sel,canAdd){
+  const s=$("fFab");s.innerHTML="";s.append(new Option("Sin especificar",""));
+  const list=S.fabs.slice();if(sel&&!list.some(f=>f.toLowerCase()===sel.toLowerCase()))list.push(sel);
+  sortFabs(list).forEach(f=>s.append(new Option(f,f)));
+  if(canAdd)s.append(new Option("+ Agregar fabricante nuevo…","__new"));
+  s.value=sel||"";$("fFabNew").hidden=true;$("fFabNew").value="";
+}
+const modsDe=f=>sortFabs(S.modelos.filter(x=>f&&x.f.toLowerCase()===String(f).toLowerCase()).map(x=>x.m));
+let modCanAdd=false;
+function fillMod(fab,sel){
+  const s=$("fMod");s.innerHTML="";s.append(new Option(fab&&fab!=="__new"?"Sin especificar":"Elegí primero el fabricante",""));
+  const list=fab==="__new"?[]:modsDe(fab);if(sel&&!list.some(m=>m.toLowerCase()===sel.toLowerCase()))list.push(sel);
+  sortFabs(list).forEach(m=>s.append(new Option(m,m)));
+  if(modCanAdd&&fab)s.append(new Option("+ Agregar modelo nuevo…","__new"));
+  s.value=sel||"";$("fModNew").hidden=true;$("fModNew").value="";
+}
+$("fMod").addEventListener("change",e=>{const n=e.target.value==="__new";$("fModNew").hidden=!n;if(n)$("fModNew").focus()});
+async function addMod(f,m){
+  const ex=modsDe(f).find(x=>x.toLowerCase()===m.toLowerCase());if(ex)return ex;
+  const lista=[...S.modelos,{f,m}];
+  try{await db.doc("config/modelos").set({lista});S.modelos=lista}catch(e){}
+  return m;
+}
+$("fFab").addEventListener("change",e=>{const n=e.target.value==="__new";$("fFabNew").hidden=!n;if(n)$("fFabNew").focus();fillMod(e.target.value,"")});
+async function addFab(name){
+  const ex=S.fabs.find(f=>f.toLowerCase()===name.toLowerCase());if(ex)return ex;
+  const nombres=sortFabs([...S.fabs,name]);
+  try{await db.doc("config/fabricantes").set({nombres});S.fabs=nombres}catch(e){}
+  return name;
+}
+
+function applyRol(){
+  const r=rol(),b=$("rol"),n=$("roNotice");
+  const txt={general:"Administrador general",admin_sala:"Admin. "+nombresMisSalas(),asistente:"Asistente · "+nombresMisSalas(),supervisor:"Supervisor · todas las salas",tecnico:"Técnico · solo lectura",sinasig:"Sin sala asignada"}[r];
+  b.hidden=!db||!txt||(deSala(r)&&miSala()==null);b.textContent=txt||"";
+  let note="";
+  if(r==="supervisor")note="Perfil Supervisor: ves las 5 salas en conjunto y los reportes. En Repuestos podés responder los pedidos informando el envío. En Padrón podés agregar, modificar y dar de baja máquinas. No podés cargar fallas.";
+  else if(r==="tecnico")note=S.ro?"Perfil Técnico: podés ver todas las máquinas y su historial, pero no cargar, modificar ni borrar.":"Perfil Técnico: podés ver todas las máquinas, informar las reparaciones de máquinas y las fallas secundarias que soluciones (la sala las confirma), pedir repuestos y confirmar el recibido de los que te envían.";
+  else if(r==="sinasig"||(deSala(r)&&miSala()==null))note="Tu usuario todavía no tiene perfil ni sala asignados. Si el administrador general te pasó un código de acceso, ingresalo acá abajo. Hasta entonces no vas a ver los datos del tablero.";
+  else if(deSala(r))note="Podés cargar y modificar máquinas de "+nombresMisSalas()+(r==="admin_sala"?", y también borrarlas y archivarlas.":".")+"";
+  const fija=r==="sinasig"||(deSala(r)&&miSala()==null);
+  const key="fs-nota-"+r+"-"+miSalas().join("_");let cerrada=false;
+  try{cerrada=!fija&&localStorage.getItem(key)==="1"}catch(e){}
+  n.innerHTML="";n.append(el("span",null,note));
+  if(!fija){const x=el("button","nclose","✕");x.type="button";x.setAttribute("aria-label","Cerrar aviso");x.onclick=()=>{try{localStorage.setItem(key,"1")}catch(e){}n.hidden=true};n.append(x)}
+  n.hidden=!note||!db||cerrada;
+  $("codeForm").hidden=!(db&&S.uid&&S.genLoaded&&!S.general&&S.asigLoaded&&!miAsig());$("bootBox").hidden=!(db&&S.genLoaded&&S.sinGeneral);
+  updNew();
+  $("btnConfig").hidden=r!=="general";$("btnUsr").hidden=r!=="general";$("btnRep").hidden=!puedeReportes();$("btnArc").hidden=!puedeArchivar();
+  $("tabPad").hidden=!puedePadron();subPadron();
+  if(S.v==="pad"&&!puedePadron()&&r!=="cargando"){const t=document.querySelector('#vtabs button[data-v="maq"]');if(t)t.click()}
+  const perfilKey=r+"|"+miSalas().join(",");
+  if(r!=="cargando"&&S.salaInit!==perfilKey){S.salaInit=perfilKey;S.sala=deSala(r)&&miSalas().length===1?String(miSala()):"all";subData();subPadron();renderAll()}
+}
+
+/* --- listado --- */
+function filtered(){
+  const q=S.q.trim().toLowerCase();
+  return S.maq.filter(m=>{
+    if(!enAlcance(m))return false;
+    if(S.viejas&&!esVieja(m))return false;
+    if(S.informadas&&!(m.estado!=="ok"&&infPend(m).length))return false;
+    if(S.sala!=="all"&&String(m.sala)!==S.sala)return false;
+    if(S.f==="activas"&&m.estado==="ok")return false;
+    if(S.f==="ok"&&m.estado!=="ok")return false;
+    if(q){const h=[m.numero,m.fabricante,m.modelo,m.ubicacion,m.falla,m.detalle,m.tecnico,salaName(m.sala)].join(" ").toLowerCase();if(!h.includes(q))return false}
+    return true;
+  }).sort((a,b)=>{const o={fs:0,rep:1,ok:2};return (o[a.estado]-o[b.estado])||(a.estado==="ok"?repTs(b)-repTs(a):(b.actualizado||0)-(a.actualizado||0))});
+}
+function renderSalas(){
+  const box=$("salas");box.innerHTML="";
+  const mk=(key,name,list)=>{
+    const b=el("button","sala");b.type="button";b.setAttribute("aria-pressed",String(S.sala===key));
+    b.append(el("span","n",name));
+    if(S.v==="pad"){const L=S.pad.filter(p=>key==="all"||String(p.sala)===key);const ac=L.filter(padAct);
+      const c=el("span","c",String(ac.length));c.append(el("span",null,"activas"));b.append(c);const nb=L.length-ac.length;
+      const nf=new Set(ac.map(fabKey)).size;b.append(el("span","sub",nf+(nf===1?" fabricante":" fabricantes")+(nb?" · "+nb+(nb===1?" baja":" bajas"):"")))}
+    else if(S.v==="sec"){const L=S.sec.filter(x=>(key==="all"||String(x.sala)===key)&&enAlcance(x));const ab=L.filter(secAbierta).length;
+      const c=el("span","c",String(ab));c.append(el("span",null,"activas"));b.append(c);b.append(el("span","sub",(L.length-ab)+" solucionadas"))}
+    else if(S.v==="rq"){const L=S.rq.filter(x=>(key==="all"||String(x.sala)===key)&&abiertoRq(x));const pe=L.filter(x=>x.estado==="pendiente").length;
+      const c=el("span","c",String(L.length));c.append(el("span",null,"abiertos"));b.append(c);b.append(el("span","sub",pe+" sin atender · "+L.filter(x=>x.estado==="enviado").length+" en camino"))}
+    else{const fs=list.filter(m=>m.estado==="fs").length,rep=list.filter(m=>m.estado==="rep").length;
+    if(key!=="all"&&fs+rep>S.al.maq)b.classList.add("alarm");
+    const c=el("span","c",String(fs+rep));c.append(el("span",null,"pend."));b.append(c);
+    b.append(el("span","sub",fs+" F/S · "+rep+" en rep."))}
+    b.onclick=()=>{S.sala=key;renderAll()};box.append(b);
+  };
+  const sv=salaVisible();
+  if(sv&&sv.length===1){box.classList.add("una");mk(String(sv[0]),salaName(sv[0]),S.maq.filter(m=>Number(m.sala)===sv[0]));return}
+  if(sv){box.classList.remove("una");mk("all","Mis salas",S.maq.filter(enAlcance));sv.forEach(i=>mk(String(i),salaName(i),S.maq.filter(m=>Number(m.sala)===i)));return}
+  box.classList.remove("una");
+  mk("all","Todas",S.maq);
+  S.salas.forEach((n,i)=>mk(String(i),n,S.maq.filter(m=>String(m.sala)===String(i))));
+}
+let rseq=0;
+async function renderList(){
+  if(S.v==="rq"){++rseq;renderRqList();return}
+  if(S.v==="sec"){++rseq;renderSecList();return}
+  if(S.v==="pad"){++rseq;renderPadList();return}
+  const my=++rseq,items=filtered(),box=$("list");let ps={};
+  const ids=[...new Set(items.flatMap(m=>[m.creadoPor,m.actualizadoPor]).filter(Boolean))];
+  if(user&&ids.length){try{ps=await user.profiles(ids)}catch(e){}}
+  if(my!==rseq)return;
+  box.innerHTML="";const who=id=>(ps[id]&&ps[id].name)||"Alguien";
+  box.classList.toggle("aslist",S.vista==="lista"&&items.length>0);
+  if(S.vista==="lista"){if(items.length)box.append(tablaMaq(items))}
+  else items.forEach(m=>{
+    const c=el("button","card");c.type="button";c.dataset.e=m.estado;c.append(el("span","stripe"));
+    const b=el("div","body"),r1=el("div","row1"),n=el("div","num","N° "+(m.numero||"?"));
+    n.append(el("small",null,[m.fabricante,m.modelo].filter(Boolean).join(" · ")||"Sin modelo cargado"));
+    const ch=el("span","chip",ESTADO[m.estado]||m.estado);ch.dataset.e=m.estado;r1.append(n,ch);b.append(r1);
+    const f=el("div","falla",m.falla||"Falla sin especificar");if(m.detalle)f.append(el("span",null," — "+m.detalle));b.append(f);
+    if(m.estado==="ok"){const ri=el("div","repinfo");ri.append(el("span",null,"Reparada "));ri.append(el("b",null,fmt(repTs(m))));ri.append(el("span",null," · estuvo "));ri.append(el("b",null,diasTxt(diasSin(m))));ri.append(el("span",null," sin funcionar"));if(m.reparadoPorTecnico){ri.append(el("span",null," · técnico "));ri.append(el("b",null,m.reparadoPorTecnico))}if(m.confirmadoNombre){ri.append(el("span",null," · confirmó "));ri.append(el("b",null,m.confirmadoNombre))}if(m.diagnostico){const dg=el("div",null,"Diagnóstico: "+m.diagnostico);dg.style.marginTop="2px";ri.append(dg)}if(m.repuesto||m.sinRepuesto)ri.append(el("div",null,m.sinRepuesto?"Sin repuesto":"Repuesto: "+m.repuesto));b.append(ri)}
+    const meta=el("div","meta");meta.append(el("span","tag",salaName(m.sala)));
+    if(m.ubicacion)meta.append(el("span",null,m.ubicacion));
+    meta.append(el("span",null,"Reportada "+fmt(m.creado)));
+    if(esVieja(m))meta.append(el("span","tag dias",diasParada(m)+" días sin solución"));
+    if(m.estado!=="ok"){const ip=infPend(m);if(ip.length)meta.append(el("span","tag inf","Técnico informó reparada "+fmt(ip[0].horaReparacion)))}
+    if(m.tecnico){const s=el("span",null,"Técnico: ");s.append(el("b",null,m.tecnico));meta.append(s)}
+    const rqa=S.rq.filter(x=>abiertoRq(x)&&Number(x.sala)===Number(m.sala)&&String(x.numero).toLowerCase()===String(m.numero).toLowerCase());
+    if(rqa.length)meta.append(el("span","tag rqtag",rqa.length===1?"Repuesto: "+ESTADO_RQ[rqa[0].estado]:rqa.length+" repuestos pedidos"));
+    const u=el("span",null,"Act. "+hace(m.actualizado)+" por ");u.append(el("b",null,who(m.actualizadoPor)));meta.append(u);
+    b.append(meta);c.append(b);c.onclick=()=>openForm(m);box.append(c);
+  });
+  const e=$("empty");e.hidden=items.length>0;
+  if(!items.length){
+    if(!S.ready){$("emptyT").textContent="Cargando tablero…";$("emptyP").textContent="Trayendo las máquinas de las 5 salas."}
+    else if(rol()==="sinasig"){$("emptyT").textContent="Todavía no tenés acceso";$("emptyP").textContent="Ingresá tu código de acceso o pedile al administrador general que te asigne un perfil."}
+    else if(!S.maq.length){$("emptyT").textContent="Sin máquinas fuera de servicio";$("emptyP").textContent="Cuando el personal de una sala cargue una máquina, aparece acá para todos al instante."}
+    else{$("emptyT").textContent="Nada para mostrar con este filtro";$("emptyP").textContent="Probá con otra sala, otro estado o borrá la búsqueda."}
+  }
+}
+function renderAll(){
+  renderAlertas();renderSalas();renderList();
+  $("btnImp").hidden=!(S.v==="pad"&&puedeEditPad());$("list").classList.toggle("padlist",S.v==="pad");
+  const lab=S.v==="pad"?{activas:"Activas",ok:"Bajas",all:"Todas"}:S.v==="rq"?{activas:"Abiertos",ok:"Cerrados",all:"Todos"}:S.v==="sec"?{activas:"Activas",ok:"Solucionadas",all:"Todas"}:{activas:"Pendientes",ok:"Reparadas",all:"Todas"};
+  document.querySelectorAll(".seg button[data-f]").forEach(b=>{b.setAttribute("aria-pressed",String(b.dataset.f===S.f));b.textContent=lab[b.dataset.f]});
+  const n=S.rq.filter(x=>abiertoRq(x)&&enAlcance(x)).length,c=$("rqCount");c.textContent=String(n);c.hidden=!n;
+  const ns=S.sec.filter(x=>secAbierta(x)&&enAlcance(x)).length,cs=$("secCount");cs.textContent=String(ns);cs.hidden=!ns;
+}
+document.querySelectorAll(".seg button[data-f]").forEach(b=>b.onclick=()=>{S.f=b.dataset.f;renderAll()});
+$("q").addEventListener("input",e=>{S.q=e.target.value;renderList()});
+
+/* --- formulario --- */
+const MIN_REP=5;
+function updRepBox(){$("repBox").hidden=!$("eOk").checked;if($("eOk").checked&&!$("fProc").disabled&&!$("fProc").value.trim())$("fProc").value="1. "}
+function setUso(v,rep){$("fUsoSi").checked=v==="si";$("fUsoNo").checked=v==="no";$("fRep").hidden=v!=="si";$("fRep").value=rep||""}
+["fUsoSi","fUsoNo"].forEach(id=>$(id).addEventListener("change",()=>{const si=$("fUsoSi").checked;$("fRep").hidden=!si;if(si)$("fRep").focus()}));
+document.querySelectorAll('input[name="estado"]').forEach(r=>r.addEventListener("change",()=>{updRepBox();if($("eOk").checked&&!$("fDiag").disabled)setTimeout(()=>($("fDiag").value.trim()?$("fProc"):$("fDiag")).focus(),30)}));
+function openForm(m){
+  fillSalaSelect();S.editId=m?m.id:null;
+  const general=rol()==="general";
+  const ro=m?!puedeEditar(m):!puedeCargar();
+  $("formT").textContent=m?("Máquina N° "+(m.numero||"")):"Cargar máquina";
+  if(!general&&!m){const fs=$("fSala");[...fs.options].forEach(o=>{if(!esMiSala(o.value))o.remove()})}
+  $("fSala").value=m?String(m.sala):(general?(S.sala!=="all"?S.sala:"0"):(S.sala!=="all"&&esMiSala(S.sala)?S.sala:String(miSala())));
+  $("fNum").value=m?m.numero||"":"";fillFab(m?m.fabricante||"":"",!ro);
+  modCanAdd=!ro;fillMod(m?m.fabricante||"":"",m?m.modelo||"":"");$("fUbi").value=m?m.ubicacion||"":"";$("fFalla").value=m&&m.falla?m.falla:FALLAS[0];$("fDet").value=m?m.detalle||"":"";
+  $("fTec").value=m?m.tecnico||"":"";$("fObs").value=m?m.obs||"":"";
+  ({fs:$("eFs"),rep:$("eRep"),ok:$("eOk")})[m?m.estado:"fs"].checked=true;$("fDiag").value=m?m.diagnostico||"":"";$("fProc").value=m?m.procedimiento||"":"";setUso(m&&m.sinRepuesto?"no":m&&m.repuesto?"si":"",m?m.repuesto:"");setTimeout(updRepBox,0);
+  $("form").querySelectorAll("input,select,textarea").forEach(x=>x.disabled=ro);
+  $("fSala").disabled=ro||!(general||(!m&&miSalas().length>1));
+  const note=$("formNote");
+  const txts=[];if(m&&m.estado==="ok")txts.push("Reparada el "+fmt(repTs(m))+". Estuvo "+diasTxt(diasSin(m))+" sin funcionar.");else if(m&&m.creado)txts.push("Lleva "+diasTxt((Date.now()-m.creado)/864e5)+" sin funcionar.");
+  if(m&&ro)txts.push(rol()==="tecnico"?"Modo lectura.":"Modo lectura: esta máquina es de "+salaName(m.sala)+".");
+  note.hidden=!txts.length;note.textContent=txts.join(" ");
+  $("btnBorrar").hidden=!m||!puedeBorrar(m);$("btnPedirMaq").hidden=!m||!puedePedir()||(deSala(rol())&&!esMiSala(m.sala));$("confirmDel").hidden=true;$("btnGuardar").hidden=ro;
+  $("btnInfMaq").hidden=!m||m.estado==="ok"||!puedeInformar()||puedeEditar(m);renderInfBox(m);
+  fillNumSel("");renderHist(m);$("ov").hidden=false;
+  if(!m&&!ro)setTimeout(()=>($("fNum").hidden?$("fFab"):$("fNum")).focus(),60);
+}
+async function renderHist(m){
+  const h=$("hist");h.innerHTML="";h.hidden=!m||!(m.historial||[]).length;if(h.hidden)return;
+  let ps={};const ids=[...new Set(m.historial.map(x=>x.por).filter(Boolean))];
+  if(user&&ids.length){try{ps=await user.profiles(ids)}catch(e){}}
+  h.append(el("div",null,"Historial"));
+  m.historial.slice().reverse().slice(0,12).forEach(x=>{const d=el("div",null,fmt(x.t)+" · ");d.append(el("b",null,ESTADO[x.estado]||x.estado));d.append(document.createTextNode(" · "+((ps[x.por]&&ps[x.por].name)||"Alguien")));h.append(d)});
+}
+function closeForm(){$("ov").hidden=true;S.editId=null}
+
+$("btnCerrar").onclick=closeForm;$("btnCancelar").onclick=closeForm;
+$("ov").addEventListener("click",e=>{if(e.target.id==="ov")closeForm()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeForm();["ovCfg","ovArc","ovUsr","ovRep","ovRq","ovInf","ovSec","ovPad","ovImp"].forEach(i=>$(i).hidden=true)}});
+
+function writeErr(e){
+  if(e&&(e.code==="permission-denied"||e.code==="invalid_argument"))toast("No tenés permiso para hacer ese cambio.");
+  else if(e&&e.code==="resource-exhausted")toast("El tablero llegó a su límite de registros. Archivá máquinas reparadas antiguas.");
+  else toast("No se pudo guardar. Revisá la conexión e intentá de nuevo.");
+}
+$("form").addEventListener("submit",async e=>{
+  e.preventDefault();if(!db)return;
+  const prev=S.editId?S.maq.find(m=>m.id===S.editId):null;
+  if(prev?!puedeEditar(prev):!puedeCargar())return;
+  const numero=$("fNum").value.trim();if(!numero){($("fNum").hidden?$("fNumSel"):$("fNum")).focus();toast("Elegí el número de máquina.");return}
+  let sala=rol()==="general"?Number($("fSala").value):(prev?Number(prev.sala):Number($("fSala").value));
+  if(rol()!=="general"&&!esMiSala(sala))sala=miSala();
+  let fabricante=$("fFab").value;
+  if(fabricante==="__new"){const nv=$("fFabNew").value.trim();if(!nv){$("fFabNew").focus();toast("Escribí el nombre del fabricante nuevo.");return}fabricante=await addFab(nv)}
+  let modelo=$("fMod").value;
+  if(modelo==="__new"){const nv=$("fModNew").value.trim();if(!nv){$("fModNew").focus();toast("Escribí el nombre del modelo nuevo.");return}modelo=fabricante?await addMod(fabricante,nv):nv}
+  const estado=document.querySelector('input[name="estado"]:checked').value,now=Date.now();
+  const diag=$("fDiag").value.trim(),proc=$("fProc").value.trim(),pasaAok=estado==="ok"&&(!prev||prev.estado!=="ok");
+  if(pasaAok){
+    if(diag.length<MIN_REP){updRepBox();$("fDiag").focus();toast("Para marcarla como reparada, escribí el diagnóstico.");return}
+    if(accionesDe(proc).length<2){updRepBox();$("fProc").focus();toast("Enumerá al menos 2 pasos del procedimiento, uno por línea.");return}
+    if(!$("fUsoSi").checked&&!$("fUsoNo").checked){$("fUsoSi").focus();toast("Indicá si se usó repuesto o si no fue necesario.");return}
+    if($("fUsoSi").checked&&$("fRep").value.trim().length<3){$("fRep").focus();toast("Escribí qué repuesto se usó.");return}
+  }
+  const usoRep=$("fUsoSi").checked?"si":$("fUsoNo").checked?"no":"";
+  const data={diagnostico:diag,procedimiento:pasaAok?accionesDe(proc).map((a,k)=>(k+1)+". "+a).join("\n"):proc,repuesto:usoRep==="si"?$("fRep").value.trim():"",sinRepuesto:usoRep==="no",sala,numero,fabricante,modelo,ubicacion:$("fUbi").value.trim(),falla:$("fFalla").value,detalle:$("fDet").value.trim(),estado,tecnico:$("fTec").value.trim(),obs:$("fObs").value.trim(),actualizado:now,actualizadoPor:S.uid};
+  const btn=$("btnGuardar");btn.disabled=true;
+  try{
+    if(prev){
+      let hist=(prev.historial||[]).slice();
+      if(prev.estado!==estado){hist.push({t:now,estado,por:S.uid});hist=hist.slice(-30)}
+      data.historial=hist;if(estado==="ok"&&prev.estado!=="ok"){data.reparada=now;data.confirmadoPor=S.uid;data.confirmadoNombre=await miNombre();const ip=infPend(prev);data.reparadoPorTecnico=ip.length?(ip[0].tecnicoNombre||""):"";if(ip.length)data.obs=[data.obs,"Informe técnico ("+(ip[0].tecnicoNombre||"técnico")+"): reparada "+fmt(ip[0].horaReparacion)].filter(Boolean).join(" · ").slice(0,500)}
+      if(estado!=="ok"&&prev.estado==="ok"){data.confirmadoNombre="";data.reparadoPorTecnico=""}
+      await db.collection("maquinas").doc(prev.id).update(data);toast("Cambios guardados");
+      if(estado==="ok"&&prev.estado!=="ok")resolverInformes(prev,"confirmado");
+    }else{
+      const dup=S.maq.find(m=>m.estado!=="ok"&&Number(m.sala)===sala&&String(m.numero).toLowerCase()===numero.toLowerCase());
+      if(dup){toast("La N° "+numero+" ya figura pendiente en esta sala. Abrila para actualizarla.");btn.disabled=false;return}
+      Object.assign(data,{creado:now,creadoPor:S.uid,historial:[{t:now,estado,por:S.uid}]});
+      if(estado==="ok"){data.reparada=now;data.confirmadoPor=S.uid;data.confirmadoNombre=await miNombre()}
+      await db.collection("maquinas").doc().set(data);toast("Máquina cargada");
+    }
+    closeForm();
+  }catch(err){writeErr(err)}
+  btn.disabled=false;
+});
+$("btnBorrar").onclick=()=>{$("confirmDel").hidden=false};
+$("delNo").onclick=()=>{$("confirmDel").hidden=true};
+$("delSi").onclick=async()=>{const m=S.maq.find(x=>x.id===S.editId);if(!m||!puedeBorrar(m))return;try{await db.collection("maquinas").doc(m.id).delete();toast("Máquina borrada");closeForm()}catch(e){writeErr(e)}};
+
+/* --- configuración (general) --- */
+let cfgFabs=[];
+function renderCfgFabs(){const b=$("cfgFabs");b.innerHTML="";cfgFabs.forEach((f,i)=>{const c=el("span","fabchip",f);const x=el("button",null,"✕");x.type="button";x.setAttribute("aria-label","Quitar "+f);x.onclick=()=>{cfgFabs.splice(i,1);renderCfgFabs()};c.append(x);b.append(c)});fillCfgModFab()}
+$("cfgFabAdd").onclick=()=>{const v=$("cfgFabNew").value.trim();if(!v)return;if(!cfgFabs.some(f=>f.toLowerCase()===v.toLowerCase()))cfgFabs=sortFabs([...cfgFabs,v]);$("cfgFabNew").value="";renderCfgFabs();$("cfgFabNew").focus()};
+$("cfgFabNew").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("cfgFabAdd").click()}});
+let cfgMods=[];
+function fillCfgModFab(){const s=$("cfgModFab"),v=s.value;s.innerHTML="";cfgFabs.forEach(f=>s.append(new Option(f,f)));if(v&&cfgFabs.includes(v))s.value=v;renderCfgMods()}
+function renderCfgMods(){
+  const f=$("cfgModFab").value,b=$("cfgMods");b.innerHTML="";
+  const list=cfgMods.filter(x=>x.f===f).sort((a,c)=>a.m.localeCompare(c.m,"es"));
+  if(!list.length)b.append(el("p","muted",f?"Sin modelos cargados para "+f+".":"Agregá primero un fabricante."));
+  list.forEach(x=>{const c=el("span","fabchip",x.m);const k=el("button",null,"✕");k.type="button";k.setAttribute("aria-label","Quitar "+x.m);k.onclick=()=>{cfgMods=cfgMods.filter(y=>y!==x);renderCfgMods()};c.append(k);b.append(c)});
+}
+$("cfgModFab").addEventListener("change",renderCfgMods);
+$("cfgModAdd").onclick=()=>{const f=$("cfgModFab").value,v=$("cfgModNew").value.trim();if(!f||!v)return;if(!cfgMods.some(x=>x.f===f&&x.m.toLowerCase()===v.toLowerCase()))cfgMods=[...cfgMods,{f,m:v}];$("cfgModNew").value="";renderCfgMods();$("cfgModNew").focus()};
+$("cfgModNew").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("cfgModAdd").click()}});
+$("btnConfig").onclick=()=>{const f=$("cfgFields");f.innerHTML="";S.salas.forEach((n,i)=>{const d=el("div","field");const l=el("label",null,"Localidad "+(i+1));l.htmlFor="cfg"+i;const inp=el("input");inp.id="cfg"+i;inp.value=n;inp.maxLength=40;d.append(l,inp);f.append(d)});cfgFabs=S.fabs.slice();cfgMods=S.modelos.slice();renderCfgFabs();$("vConf").value="";$("vInfo").textContent="";vUpd();$("alMaq").value=S.al.maq;$("alDias").value=S.al.dias;$("ovCfg").hidden=false};
+$("cfgCerrar").onclick=$("cfgCancel").onclick=()=>$("ovCfg").hidden=true;
+$("formCfg").addEventListener("submit",async e=>{e.preventDefault();const nombres=S.salas.map((n,i)=>$("cfg"+i).value.trim()||("Sala "+(i+1)));try{await db.doc("config/salas").set({nombres});await db.doc("config/fabricantes").set({nombres:sortFabs(cfgFabs)});await db.doc("config/modelos").set({lista:cfgMods.filter(x=>cfgFabs.includes(x.f))});
+  const am=Math.max(1,Math.min(99,parseInt($("alMaq").value,10)||5)),ad=Math.max(1,Math.min(365,parseInt($("alDias").value,10)||10));
+  if(am!==S.al.maq||ad!==S.al.dias)await db.doc("config/alertas").set({maq:am,dias:ad});$("ovCfg").hidden=true;toast("Configuración guardada")}catch(err){toast("No se pudo guardar la configuración.")}});
+
+/* --- vaciar tablero (general) --- */
+function vUpd(){$("vnMaq").textContent=String(S.maq.length);$("vnRq").textContent=String(S.rq.length);$("vnSec").textContent=String(S.sec.length);$("vGo").disabled=!(rol()==="general"&&$("vConf").value.trim().toUpperCase()==="BORRAR"&&($("vcMaq").checked||$("vcRq").checked||$("vcSec").checked))}
+["vConf","vcMaq","vcRq","vcSec"].forEach(id=>$(id).addEventListener("input",vUpd));["vcMaq","vcRq","vcSec"].forEach(id=>$(id).addEventListener("change",vUpd));
+async function vExport(kind){
+  if(!downloads){toast("La descarga no está disponible en esta vista.");return}
+  const all=kind==="maq"?S.maq.slice():kind==="sec"?S.sec.slice():S.rq.slice();if(!all.length){toast("No hay datos para exportar.");return}
+  try{await downloads.save(kind==="maq"?{filename:"respaldo-maquinas-"+hoy()+".csv",data:csvFor(all)}:kind==="sec"?{filename:"respaldo-fallas-secundarias-"+hoy()+".csv",data:csvSec(all)}:{filename:"respaldo-repuestos-"+hoy()+".csv",data:csvRq(all)});toast("Archivo exportado")}
+  catch(e){if(e&&e.code!=="declined")toast("No se pudo exportar el archivo.")}
+}
+$("vxMaq").onclick=()=>vExport("maq");$("vxRq").onclick=()=>vExport("rq");$("vxSec").onclick=()=>vExport("sec");
+$("vGo").onclick=async()=>{
+  if(rol()!=="general")return;
+  const list=[...($("vcMaq").checked?S.maq.map(m=>["maquinas",m.id]):[]),...($("vcRq").checked?S.rq.map(x=>["repuestos",x.id]):[]),...($("vcSec").checked?S.sec.map(x=>["secundarias",x.id]):[])];
+  if(!list.length){toast("No hay nada para borrar.");return}
+  $("vGo").disabled=true;let ok=0;
+  for(let i=0;i<list.length;i+=10){const r=await Promise.allSettled(list.slice(i,i+10).map(([c,id])=>db.collection(c).doc(id).delete()));ok+=r.filter(x=>x.status==="fulfilled").length;$("vInfo").textContent="Borrando… "+ok+" de "+list.length}
+  $("vConf").value="";$("vInfo").textContent="";vUpd();
+  toast(ok===list.length?("Tablero vaciado: se borraron "+ok+" registros"):("Se borraron "+ok+" de "+list.length+". Volvé a intentar para el resto."));
+};
+/* --- usuarios (general) --- */
+/* En Firebase cada usuario tiene su documento usuarios/{uid} (lo leen las reglas de seguridad)
+   y cada código de acceso es un documento codigos/{hash}. */
+function usrErr(){toast("No se pudo guardar el cambio de usuario. Volvé a abrir Usuarios.")}
+function linkedUid(h){return Object.keys(S.usrAll).find(id=>S.usrAll[id].h===h)||null}
+function setAsig(id,val){
+  const ref=db.doc("usuarios/"+id);
+  (val?ref.set({rol:val.rol,sala:val.sala==null?null:val.sala,salas:val.salas||[],nombre:val.nombre||""}):ref.delete()).catch(usrErr);
+}
+function savePersona(p,v){
+  const b=db.batch(),d={pid:p.pid||"",nombre:p.nombre,rol:v.rol,sala:v.sala==null?null:v.sala,salas:v.salas||[]};
+  b.set(db.doc("codigos/"+p.h),d);
+  const u=linkedUid(p.h);if(u)b.set(db.doc("usuarios/"+u),Object.assign({h:p.h},d));
+  b.commit().catch(usrErr);
+}
+function avatar(p){if(!p||!p.avatarUrl)return initials(p&&p.name);const i=el("img");i.alt="";i.referrerPolicy="no-referrer";i.src=p.avatarUrl;return i}
+function initials(n){const i=el("span");i.textContent=(n||"?").split(/\s+/).map(w=>w[0]||"").join("").slice(0,2).toUpperCase();i.style.cssText="width:32px;height:32px;border-radius:50%;flex:none;display:inline-flex;align-items:center;justify-content:center;background:var(--accent-soft);color:var(--accent);font-weight:600;font-size:.8rem";return i}
+const salasDe=a=>a&&Array.isArray(a.salas)&&a.salas.length?a.salas.map(Number):(a&&a.sala!=null?[Number(a.sala)]:[0]);
+function salaPicker(sel,nm,onChange){
+  const w=el("div","spick");w.setAttribute("role","group");w.setAttribute("aria-label","Salas de "+nm);let cur=sel.slice();
+  const draw=()=>{w.innerHTML="";S.salas.forEach((n,i)=>{const b=el("button",null,n);b.type="button";b.setAttribute("aria-pressed",String(cur.includes(i)));b.onclick=()=>{const nx=cur.includes(i)?cur.filter(x=>x!==i):[...cur,i].sort();if(!nx.length){toast("Tiene que quedar al menos una sala.");return}cur=nx;draw();onChange(cur)};w.append(b)})};
+  draw();w.val=()=>cur;return w;
+}
+const asigVal=(rolv,salas)=>sinSala(rolv)?{rol:rolv,sala:null,salas:[]}:{rol:rolv,sala:salas[0],salas};
+function rolSalaSelects(cur,nm,onChange){
+  const sr=el("select");sr.setAttribute("aria-label","Perfil de "+nm);Object.entries(ROLES).forEach(([k,v])=>sr.append(new Option(v,k)));sr.value=cur.rol;
+  const ss=salaPicker(salasDe(cur),nm,v=>onChange(asigVal(sr.value,v)));ss.hidden=sinSala(cur.rol);
+  sr.onchange=()=>{ss.hidden=sinSala(sr.value);onChange(asigVal(sr.value,ss.val()))};
+  return [sr,ss];
+}
+let uPick=null,uSel=[0];
+function fillUsrAdd(){
+  const r=$("uRol");if(!r.options.length)Object.entries(ROLES).forEach(([k,v])=>r.append(new Option(v,k)));
+  const box=$("uSalaBox");box.innerHTML="";
+  if(sinSala(r.value)){box.append(el("span","muted","Ve todas las salas"));return}
+  uPick=salaPicker(uSel,"la persona nueva",v=>{uSel=v});box.append(uPick);
+}
+$("uRol").addEventListener("change",fillUsrAdd);
+const ALF="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+function nuevoCodigo(){const r=new Uint32Array(6);crypto.getRandomValues(r);const c=[...r].map(n=>ALF[n%ALF.length]).join("");return c.slice(0,3)+"-"+c.slice(3)}
+const normCode=c=>String(c||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
+async function hashCode(c){
+  const t=normCode(c)+"|tablero-fs";
+  try{const d=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t));return [...new Uint8Array(d)].map(x=>x.toString(16).padStart(2,"0")).join("")}
+  catch(e){let h=5381;for(const ch of t)h=((h<<5)+h+ch.charCodeAt(0))>>>0;return "d"+h.toString(16)}
+}
+function mostrarCodigo(nombre,code,pid){
+  const b=$("usrCode");b.innerHTML="";b.hidden=false;b.dataset.pid=pid||"";
+  const t=el("span",null,"Código de "+nombre+": ");const c=el("b",null,code);c.style.cssText="font-family:var(--f-mono);font-size:1.15rem;letter-spacing:.08em";t.append(c);
+  const cp=el("button","btn","Copiar");cp.type="button";cp.onclick=async()=>{try{await navigator.clipboard.writeText(code);toast("Código copiado")}catch(e){const r=document.createRange();r.selectNodeContents(c);const sel=getSelection();sel.removeAllRanges();sel.addRange(r);toast("Copialo con Ctrl+C")}};
+  b.append(t,el("span",null," Pasáselo por WhatsApp o mail. Por seguridad no se vuelve a mostrar; si se pierde, generá uno nuevo."),cp);
+}
+$("usrAdd").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const nombre=$("uNom").value.trim(),rolv=$("uRol").value;
+  if(!nombre){$("uNom").focus();toast("Falta el nombre.");return}
+  const code=nuevoCodigo(),h=await hashCode(code);
+  const pid="p"+Date.now().toString(36);
+  const av=asigVal(rolv,uSel);
+  db.doc("codigos/"+h).set({pid,nombre,rol:av.rol,sala:av.sala==null?null:av.sala,salas:av.salas||[]}).catch(usrErr);
+  $("uNom").value="";mostrarCodigo(nombre,code,pid);
+});
+let useq=0;
+async function renderUsr(){
+  if($("ovUsr").hidden)return;
+  fillUsrAdd();
+  const my=++useq;const asigIds=Object.keys(S.asig);
+  const vinc={};Object.keys(S.usrAll).forEach(id=>{const h=S.usrAll[id].h;if(h)vinc[h]=id});
+  const vis={};S.visitas.forEach(v=>vis[v.id]=v);
+  const pendRaw=S.visitas.filter(v=>!S.usrAll[v.id]&&v.id!==S.uid&&!S.generales.includes(v.id)&&!S.ocultos.includes(v.id)).sort((a,b)=>b.visto-a.visto).map(v=>v.id);
+  const vincIds=Object.values(vinc);
+  let ps={};if(user&&(asigIds.length||pendRaw.length||vincIds.length)){try{ps=await user.profiles([...asigIds,...pendRaw,...vincIds])}catch(e){}}
+  if(my!==useq)return;
+  const pend=pendRaw;
+  const nm=id=>(S.asig[id]&&S.asig[id].nombre)||(ps[id]&&ps[id].name)||"Sin nombre";
+  const L=$("usrList");L.innerHTML="";
+  if(!S.personas.length&&!asigIds.length)L.append(el("p","muted","Todavía no cargaste a nadie. Usá el formulario de arriba."));
+  S.personas.slice().sort((a,b)=>((a.sala??9)-(b.sala??9))||a.nombre.localeCompare(b.nombre,"es")).forEach(p=>{
+    const r=el("div","urow");r.append(initials(p.nombre));
+    const vid=vinc[p.h];const t=el("span","nm",p.nombre);const sm=el("small",null,vid?" · vinculado"+(ps[vid]&&ps[vid].name&&ps[vid].name!==p.nombre?" ("+ps[vid].name+")":""):" · sin vincular");sm.style.color=vid?"var(--ok)":"var(--muted)";t.append(sm);r.append(t);
+    const nc=el("button","btn","Nuevo código");nc.type="button";nc.title="Genera otro código y anula el anterior";nc.onclick=async()=>{const code=nuevoCodigo(),h=await hashCode(code);const b=db.batch(),u=linkedUid(p.h);b.delete(db.doc("codigos/"+p.h));b.set(db.doc("codigos/"+h),{pid:p.pid||"",nombre:p.nombre,rol:p.rol,sala:p.sala==null?null:p.sala,salas:p.salas||[]});if(u)b.delete(db.doc("usuarios/"+u));b.commit().catch(usrErr);mostrarCodigo(p.nombre,code,p.pid)};
+    const [sr,ss]=rolSalaSelects(p,p.nombre,v=>savePersona(p,v));
+    const x=el("button","x","✕");x.type="button";x.setAttribute("aria-label","Quitar a "+p.nombre);x.onclick=()=>{if(x.dataset.c!=="1"){x.dataset.c="1";x.textContent="¿Quitar?";x.style.width="auto";x.style.padding="0 8px";x.style.color="var(--fs)";setTimeout(()=>{if(x.isConnected){x.dataset.c="";x.textContent="✕";x.style.cssText=""}},4000);return}
+      {const b=db.batch(),u=linkedUid(p.h);b.delete(db.doc("codigos/"+p.h));if(u)b.delete(db.doc("usuarios/"+u));b.commit().catch(usrErr)}if($("usrCode").dataset.pid===p.pid)$("usrCode").hidden=true;toast(p.nombre+" quitado de Usuarios")};
+    r.append(sr,ss,nc,x);L.append(r);
+  });
+  asigIds.forEach(id=>{
+    const a=S.asig[id],r=el("div","urow");r.append(a.nombre?initials(a.nombre):avatar(ps[id]));
+    const ni=el("input","uname");ni.value=a.nombre||(ps[id]&&ps[id].name)||"";ni.placeholder="Escribí su nombre";ni.maxLength=60;ni.setAttribute("aria-label","Nombre");
+    ni.onchange=()=>{const v=ni.value.trim();setAsig(id,Object.assign({},a,{nombre:v}))};r.append(ni);
+    const [sr,ss]=rolSalaSelects(a,nm(id),v=>setAsig(id,Object.assign({},v,{nombre:a.nombre||""})));
+    const x=el("button","x","✕");x.type="button";x.setAttribute("aria-label","Quitar a "+nm(id));x.onclick=()=>setAsig(id,null);
+    r.append(sr,ss,x);L.append(r);
+  });
+  const P=$("usrPend");P.innerHTML="";$("usrPendT").hidden=!pend.length;
+  pend.forEach(id=>{const v=vis[id]||{},r=el("div","urow");r.append(avatar(ps[id]));
+    const t=el("span","nm",(ps[id]&&ps[id].name)||v.nombre||"Sin nombre");const sm=el("small",null,(v.email?" · "+v.email:"")+" · entró "+(v.visto?fmt(v.visto):"—"));sm.style.color="var(--muted)";t.append(sm);r.append(t);
+    const ni=el("input","uname");ni.placeholder="Nombre";ni.maxLength=60;ni.setAttribute("aria-label","Nombre para asignar");
+    const b=el("button","btn","Asignar");b.type="button";b.onclick=()=>{const n=ni.value.trim();if(!n){ni.focus();toast("Escribí el nombre de la persona para asignarla.");return}setAsig(id,Object.assign(asigVal("asistente",[0]),{nombre:n}));toast(n+" asignado. Elegí su perfil y sala en la lista.")};
+    const x=el("button","x","✕");x.type="button";x.title="Ocultar de esta lista";x.setAttribute("aria-label","Ocultar");x.onclick=()=>{db.doc("config/ocultos").set({ids:[...S.ocultos,id].slice(-200)}).catch(usrErr)};
+    r.append(ni,b,x);P.append(r)});
+}
+$("btnUsr").onclick=()=>{$("usrCode").hidden=true;$("ovUsr").hidden=false;renderUsr()};
+$("usrCerrar").onclick=()=>$("ovUsr").hidden=true;
+$("ovUsr").addEventListener("click",e=>{if(e.target.id==="ovUsr")$("ovUsr").hidden=true});
+
+/* --- repuestos --- */
+const TIPOS_RQ=["Billetero / validador","Impresora de tickets","Placa / CPU","Fuente de alimentación","Monitor / pantalla","Touch screen","Botonera / botones","Cerradura / llaves","Iluminación / LED","Cables / conectores","Ventilador","Tarjeta de comunicación","Otro"];
+const ESTADO_RQ={pendiente:"Pendiente",pedido:"En preparación",enviado:"Enviado",recibido:"Recibido",entregado:"Entregado",cancelado:"Cancelado"};
+const CHIP_RQ={pendiente:"fs",pedido:"rep",enviado:"sec",recibido:"rep",entregado:"ok",cancelado:"mute"};
+const abiertoRq=q=>q.estado==="pendiente"||q.estado==="pedido"||q.estado==="enviado";
+function puedeRecibir(x){return !!db&&!S.ro&&!!x&&x.estado==="enviado"&&(rol()==="tecnico"||esMio(x)||rol()==="general")}
+function recTxt(x){const r=x.recibido;return r&&r.fecha?"Recibido "+fmt(r.fecha)+(r.nombre?" por "+r.nombre:""):""}
+function puedeEnvio(x){const r=rol();return !!db&&!S.ro&&!!x&&(r==="supervisor"||r==="general")&&["pendiente","pedido","enviado"].includes(x.estado)}
+function envTxt(x){const e=x.envio;if(!e||!e.fecha)return"";return "Enviado "+fmt(e.fecha)+(e.medio?" · "+e.medio:"")+(e.remito?" · remito "+e.remito:"")+(e.nombre?" · por "+e.nombre:"")}
+TIPOS_RQ.forEach(t=>$("rqTipo").append(new Option(t,t)));
+Object.entries(ESTADO_RQ).forEach(([k,v])=>$("rqEstado").append(new Option(v,k)));
+function puedePedir(){const r=rol();if(!db||S.ro)return false;if(r==="general"||r==="tecnico")return true;return deSala(r)&&miSalas().length>0}
+function puedeGestionarRq(q){const r=rol();return !!db&&!S.ro&&(r==="general"||(r==="admin_sala"&&esMiSala(q.sala)))}
+const esMio=q=>!!S.uid&&q.solicitadoPor===S.uid;
+async function miNombre(){const a=miAsig();if(a&&a.nombre)return a.nombre;try{const me=await user.me();return me.name||""}catch(e){return""}}
+function filteredRq(){
+  const q=S.q.trim().toLowerCase();
+  return S.rq.filter(x=>{
+    if(!enAlcance(x))return false;
+    if(S.sala!=="all"&&String(x.sala)!==S.sala)return false;
+    if(S.f==="activas"&&!abiertoRq(x))return false;
+    if(S.f==="ok"&&abiertoRq(x))return false;
+    if(q){const h=[x.numero,x.tipo,x.detalle,x.tecnicoNombre,x.nota,salaName(x.sala)].join(" ").toLowerCase();if(!h.includes(q))return false}
+    return true;
+  }).sort((a,b)=>{const o={pendiente:0,pedido:1,enviado:2,recibido:3,entregado:4,cancelado:5};return ((b.urgente?1:0)-(a.urgente?1:0))*(abiertoRq(a)&&abiertoRq(b)?1:0)||(o[a.estado]-o[b.estado])||((b.creado||0)-(a.creado||0))});
+}
+function renderRqList(){
+  const items=filteredRq(),box=$("list");box.innerHTML="";
+  box.classList.toggle("aslist",S.vista==="lista"&&items.length>0);
+  if(S.vista==="lista"){if(items.length)box.append(tablaRq(items))}
+  else items.forEach(x=>{
+    const c=el("button","card");c.type="button";c.dataset.e=CHIP_RQ[x.estado]==="mute"?"ok":CHIP_RQ[x.estado];c.append(el("span","stripe"));
+    const b=el("div","body"),r1=el("div","row1"),n=el("div","num rqn",x.tipo+(Number(x.cantidad)>1?" × "+x.cantidad:""));
+    n.append(el("small",null,"Máquina N° "+(x.numero||"?")+" · "+salaName(x.sala)));
+    const chs=el("div","chips");if(x.urgente&&abiertoRq(x)){const u=el("span","chip","Urgente");chs.append(u)}
+    const ch=el("span","chip",ESTADO_RQ[x.estado]||x.estado);ch.dataset.e=CHIP_RQ[x.estado];chs.append(ch);r1.append(n,chs);b.append(r1);
+    if(x.detalle)b.append(el("div","falla",x.detalle));
+    const meta=el("div","meta");const t=el("span",null,"Pidió ");t.append(el("b",null,x.tecnicoNombre||"Técnico"));meta.append(t);
+    meta.append(el("span",null,fmt(x.creado)));
+    {const et=envTxt(x);if(et&&x.estado!=="cancelado")meta.append(el("span","tag env",et));const rt=recTxt(x);if(rt)meta.append(el("span","tag inf",rt))}
+    if(x.nota)meta.append(el("span",null,"Nota: "+x.nota));
+    if(abiertoRq(x))meta.append(el("span",null,"Abierto "+hace(x.creado).replace("hace ","hace ")));
+    b.append(meta);c.append(b);c.onclick=()=>openRq(x);box.append(c);
+  });
+  const e=$("empty");e.hidden=items.length>0;
+  if(!items.length){
+    if(!S.rq.length){$("emptyT").textContent="Sin pedidos de repuestos";$("emptyP").textContent=puedePedir()?"Tocá “Pedir repuesto” para registrar el primero. Queda guardado con tu nombre, la sala y la máquina.":"Cuando un técnico pida un repuesto, aparece acá con su nombre, la sala y la máquina."}
+    else{$("emptyT").textContent="Nada para mostrar con este filtro";$("emptyP").textContent="Probá con otra sala, otro estado o borrá la búsqueda."}
+  }
+}
+function fillDlMaq(){const s=$("rqSala").value,d=$("dlMaq");d.innerHTML="";S.maq.filter(m=>String(m.sala)===s&&m.estado!=="ok").forEach(m=>{const o=document.createElement("option");o.value=m.numero;o.label=[m.fabricante,m.modelo,m.falla].filter(Boolean).join(" · ");d.append(o)})}
+$("rqSala").addEventListener("change",fillDlMaq);
+let rqEdit=null;
+function openRq(x,pre){
+  rqEdit=x||null;
+  const s=$("rqSala");s.innerHTML="";S.salas.forEach((n,i)=>s.append(new Option(n,String(i))));
+  const limit=deSala(rol())?miSalas():null;if(limit&&!x)[...s.options].forEach(o=>{if(!limit.includes(Number(o.value)))o.remove()});
+  const fija=limit&&limit.length===1?limit[0]:null;
+  const gest=x?puedeGestionarRq(x):false,propio=x?esMio(x)&&x.estado==="pendiente"&&!S.ro:false;
+  const ro=x?!(gest||propio):!puedePedir();
+  $("rqT").textContent=x?(x.tipo+" · N° "+(x.numero||"")):"Pedir repuesto";
+  s.value=x?String(x.sala):pre?String(pre.sala):fija!=null?String(fija):(S.sala!=="all"&&(!limit||limit.includes(Number(S.sala)))?S.sala:String(limit?limit[0]:0));
+  fillDlMaq();
+  $("rqNum").value=x?x.numero||"":pre?pre.numero||"":"";
+  $("rqTipo").value=x?x.tipo:TIPOS_RQ[0];$("rqCant").value=x?x.cantidad||1:1;$("rqDet").value=x?x.detalle||"":"";
+  (x&&x.urgente?$("rqUrgSi"):$("rqUrgNo")).checked=true;
+  $("formRq").querySelectorAll("input,select,textarea").forEach(i=>i.disabled=ro);
+  s.disabled=ro||(fija!=null&&!x)||(!!x&&!gest);
+  if(x&&gest&&!propio){["rqNum","rqTipo","rqCant","rqDet"].forEach(id=>$(id).disabled=false);$("rqSala").disabled=rol()!=="general"}
+  const pe=puedeEnvio(x),ev=(x&&x.envio)||{};
+  $("rqEnv").hidden=!x||!(pe||ev.fecha);
+  $("envEstado").value=x&&x.estado==="pedido"?"pedido":"enviado";$("envFecha").value=ev.fecha?localDT(ev.fecha):localDT(Date.now());
+  $("envMedio").value=ev.medio||"";$("envRemito").value=ev.remito||"";$("envNota").value=ev.nota||"";
+  ["envEstado","envFecha","envMedio","envRemito","envNota"].forEach(id=>$(id).disabled=!pe);$("envEstado").parentElement.hidden=!pe;
+  $("envInfo").hidden=!ev.fecha;$("envInfo").textContent=ev.fecha?envTxt(x)+(ev.actualizado?" (actualizado "+fmt(ev.actualizado)+")":""):"";
+  $("rqGest").hidden=!x||(pe&&!gest);$("rqEstado").value=x?x.estado:"pendiente";$("rqNota").value=x?x.nota||"":"";
+  $("rqEstado").disabled=!gest;$("rqNota").disabled=!gest;
+  $("rqRecibido").hidden=!puedeRecibir(x);$("rqRecibido").disabled=false;
+  $("rqCancelar").hidden=!propio||gest;const rb=$("rqBorrar");rb.hidden=!x||!gest;rb.dataset.c="";rb.textContent="Borrar";
+  $("rqGuardar").hidden=ro&&!pe;$("rqGuardar").textContent=!x?"Enviar pedido":(pe&&!gest)?"Guardar envío":"Guardar";
+  const note=$("rqNote");note.hidden=true;
+  if(x){note.hidden=false;note.textContent="Pedido por "+(x.tecnicoNombre||"un técnico")+" el "+fmt(x.creado)+(pe&&!gest?" — Podés completar solo los datos del envío.":ro?" — Modo lectura.":"")}
+  renderRqHist(x);$("ovRq").hidden=false;
+  if(!x&&!ro)setTimeout(()=>(pre?$("rqTipo"):$("rqNum")).focus(),60);
+}
+async function renderRqHist(x){
+  const h=$("rqHist");h.innerHTML="";h.hidden=!x||!(x.historial||[]).length;if(h.hidden)return;
+  let ps={};const ids=[...new Set(x.historial.map(y=>y.por).filter(Boolean))];
+  if(user&&ids.length){try{ps=await user.profiles(ids)}catch(e){}}
+  h.append(el("div",null,"Historial"));
+  x.historial.slice().reverse().slice(0,12).forEach(y=>{const d=el("div",null,fmt(y.t)+" · ");d.append(el("b",null,ESTADO_RQ[y.estado]||y.estado));d.append(document.createTextNode(" · "+(y.nombre||(ps[y.por]&&ps[y.por].name)||"Alguien")));h.append(d)});
+}
+function closeRq(){$("ovRq").hidden=true;rqEdit=null}
+$("rqCerrar").onclick=closeRq;$("rqCerrar2").onclick=closeRq;
+$("ovRq").addEventListener("click",e=>{if(e.target.id==="ovRq")closeRq()});
+$("formRq").addEventListener("submit",async e=>{
+  e.preventDefault();if(!db)return;
+  const x=rqEdit,now=Date.now();
+  const numero=$("rqNum").value.trim();if(!numero){$("rqNum").focus();toast("Falta el número de máquina.");return}
+  const cant=Math.max(1,Math.min(99,parseInt($("rqCant").value,10)||1));
+  let sala=x?($("rqSala").disabled?Number(x.sala):Number($("rqSala").value)):Number($("rqSala").value);
+  if(!x&&deSala(rol())&&!esMiSala(sala))sala=miSala();
+  const maq=S.maq.find(m=>Number(m.sala)===sala&&String(m.numero).toLowerCase()===numero.toLowerCase()&&m.estado!=="ok");
+  const btn=$("rqGuardar");btn.disabled=true;
+  const nombre=await miNombre();
+  try{
+    if(!x){
+      if(!puedePedir())throw{code:"invalid_argument"};
+      await db.collection("repuestos").doc().set({sala,numero,maquinaId:maq?maq.id:null,tipo:$("rqTipo").value,cantidad:cant,urgente:$("rqUrgSi").checked,detalle:$("rqDet").value.trim(),estado:"pendiente",nota:"",tecnicoNombre:nombre,solicitadoPor:S.uid,creado:now,actualizado:now,actualizadoPor:S.uid,historial:[{t:now,estado:"pendiente",por:S.uid,nombre}]});
+      toast("Pedido enviado");
+    }else if(puedeEnvio(x)&&!puedeGestionarRq(x)){
+      const est=$("envEstado").value,fecha=new Date($("envFecha").value).getTime();
+      if(est==="enviado"&&!fecha){$("envFecha").focus();toast("Indicá la fecha y hora de envío.");btn.disabled=false;return}
+      const data={envio:{fecha:est==="enviado"?fecha:null,medio:$("envMedio").value.trim(),remito:$("envRemito").value.trim(),nota:$("envNota").value.trim(),por:S.uid,nombre,actualizado:now},actualizado:now,actualizadoPor:S.uid};
+      if(est!==x.estado){data.estado=est;data.historial=[...(x.historial||[]),{t:now,estado:est,por:S.uid,nombre}].slice(-30)}
+      await db.collection("repuestos").doc(x.id).update(data);
+      toast(est==="enviado"?"Envío informado":"Pedido marcado en preparación");
+    }else{
+      const gest=puedeGestionarRq(x),propio=esMio(x)&&x.estado==="pendiente";
+      if(!gest&&!propio){btn.disabled=false;return}
+      const data={sala,numero,maquinaId:maq?maq.id:(x.maquinaId||null),tipo:$("rqTipo").value,cantidad:cant,urgente:$("rqUrgSi").checked,detalle:$("rqDet").value.trim(),actualizado:now,actualizadoPor:S.uid};
+      if(gest&&puedeEnvio(x)&&($("envMedio").value.trim()||$("envRemito").value.trim()||$("envNota").value.trim()||x.envio))data.envio={fecha:new Date($("envFecha").value).getTime()||null,medio:$("envMedio").value.trim(),remito:$("envRemito").value.trim(),nota:$("envNota").value.trim(),por:S.uid,nombre,actualizado:now};
+      if(gest){const est=$("rqEstado").value;data.nota=$("rqNota").value.trim();if(est!==x.estado){data.estado=est;data.historial=[...(x.historial||[]),{t:now,estado:est,por:S.uid,nombre}].slice(-30)}}
+      await db.collection("repuestos").doc(x.id).update(data);
+      toast("Pedido actualizado");
+    }
+    closeRq();
+  }catch(err){writeErr(err)}
+  btn.disabled=false;
+});
+$("rqCancelar").onclick=async()=>{
+  const x=rqEdit;if(!x||!esMio(x)||x.estado!=="pendiente")return;
+  if($("rqCancelar").dataset.c!=="1"){$("rqCancelar").dataset.c="1";$("rqCancelar").textContent="¿Cancelar el pedido?";setTimeout(()=>{$("rqCancelar").dataset.c="";$("rqCancelar").textContent="Cancelar pedido"},4000);return}
+  const now=Date.now(),nombre=await miNombre();
+  try{await db.collection("repuestos").doc(x.id).update({estado:"cancelado",actualizado:now,actualizadoPor:S.uid,historial:[...(x.historial||[]),{t:now,estado:"cancelado",por:S.uid,nombre}].slice(-30)});toast("Pedido cancelado");closeRq()}catch(e){writeErr(e)}
+};
+$("rqBorrar").onclick=async()=>{
+  const x=rqEdit,b=$("rqBorrar");if(!x||!puedeGestionarRq(x))return;
+  if(b.dataset.c!=="1"){b.dataset.c="1";b.textContent="¿Borrar el pedido?";setTimeout(()=>{if(b.dataset.c==="1"){b.dataset.c="";b.textContent="Borrar"}},4000);return}
+  try{await db.collection("repuestos").doc(x.id).delete();toast("Pedido borrado");closeRq()}catch(e){writeErr(e)}
+};
+$("rqRecibido").onclick=async()=>{
+  const x=rqEdit,b=$("rqRecibido");if(!puedeRecibir(x))return;b.disabled=true;
+  const now=Date.now(),nombre=await miNombre();
+  try{await db.collection("repuestos").doc(x.id).update({estado:"recibido",recibido:{fecha:now,por:S.uid,nombre},actualizado:now,actualizadoPor:S.uid,historial:[...(x.historial||[]),{t:now,estado:"recibido",por:S.uid,nombre}].slice(-30)});toast("Recibido confirmado");closeRq()}
+  catch(e){b.disabled=false;writeErr(e)}
+};
+function csvRq(list){
+  const esc=v=>{v=v==null?"":String(v);return /[",;\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+  const rows=[["Sala","N° máquina","Repuesto","Cantidad","Prioridad","Detalle","Técnico","Pedido","Estado","Nota","Fecha de envío","Medio de envío","Remito / guía","Nota del envío","Envío informado por","Fecha de recibido","Recibido por","Última actualización"]];
+  list.forEach(x=>rows.push([salaName(x.sala),x.numero,x.tipo,x.cantidad,x.urgente?"Urgente":"Normal",x.detalle,x.tecnicoNombre,fmt(x.creado),ESTADO_RQ[x.estado],x.nota,x.envio&&x.envio.fecha?fmt(x.envio.fecha):"",x.envio?x.envio.medio:"",x.envio?x.envio.remito:"",x.envio?x.envio.nota:"",x.envio?x.envio.nombre:"",x.recibido&&x.recibido.fecha?fmt(x.recibido.fecha):"",x.recibido?x.recibido.nombre:"",fmt(x.actualizado)]));
+  return "﻿"+rows.map(r=>r.map(esc).join(";")).join("\r\n");
+}
+function updNew(){
+  if(S.v==="pad"){["btnNueva","btnNuevaDesk"].forEach(id=>{$(id).hidden=!puedeEditPad();$(id).textContent="+ Agregar máquina"});return}
+  const rq=S.v==="rq",sec=S.v==="sec",tec=!rq&&rol()==="tecnico",can=rq?puedePedir():tec?puedeInformar():puedeCargar(),t=rq?"+ Pedir repuesto":sec?(tec?"+ Informar solucionada":"+ Falla secundaria"):tec?"+ Informar reparación":"+ Cargar máquina";
+  ["btnNueva","btnNuevaDesk"].forEach(id=>{$(id).hidden=!can;$(id).textContent=t});
+}
+$("btnNueva").onclick=$("btnNuevaDesk").onclick=()=>S.v==="pad"?openPad(null):S.v==="rq"?openRq(null):S.v==="sec"?(rol()==="tecnico"?openInf(null,"sec"):openSec(null)):rol()==="tecnico"?openInf(null):openForm(null);
+document.querySelectorAll("#vtabs button").forEach(b=>b.onclick=()=>{S.v=b.dataset.v;document.querySelectorAll("#vtabs button").forEach(y=>y.setAttribute("aria-pressed",String(y===b)));$("q").placeholder=S.v==="pad"?"Buscar N°, fabricante, modelo, isla…":S.v==="rq"?"Buscar N° de máquina, repuesto, técnico…":S.v==="sec"?"Buscar N° de máquina, falla, modelo…":"Buscar N° de máquina, modelo, falla…";updNew();renderAll()});
+$("btnPedirMaq").onclick=()=>{const m=S.maq.find(x=>x.id===S.editId);if(!m)return;closeForm();openRq(null,{sala:m.sala,numero:m.numero})};
+
+/* --- informes de reparación del técnico --- */
+const infPend=m=>S.inf.filter(i=>i.maquinaId===m.id&&i.estado==="pendiente").sort((a,b)=>(b.creado||0)-(a.creado||0));
+function puedeInformar(){const r=rol();return !!db&&!S.ro&&(r==="general"||r==="tecnico")}
+const pad=n=>String(n).padStart(2,"0");
+function localDT(ts){const d=new Date(ts);return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+"T"+pad(d.getHours())+":"+pad(d.getMinutes())}
+let infModo="maq";
+function fillInfNum(sel){
+  const s=$("infNum"),sala=Number($("infSala").value);s.innerHTML="";
+  if(infModo==="sec"){
+    const L=S.sec.filter(x=>Number(x.sala)===sala&&secAbierta(x)).sort((a,b)=>String(a.numero).localeCompare(String(b.numero),"es",{numeric:true}));
+    if(!L.length){s.append(new Option("No hay fallas secundarias activas en esta sala",""));s.disabled=true;return}
+    s.disabled=false;L.forEach(x=>s.append(new Option("N° "+x.numero+" · "+(x.tipo||"Falla secundaria")+(x.detalle?" · "+x.detalle.slice(0,40):""),x.id)));
+    if(sel&&L.some(x=>x.id===sel))s.value=sel;return;
+  }
+  const L=S.maq.filter(m=>Number(m.sala)===sala&&m.estado!=="ok").sort((a,b)=>String(a.numero).localeCompare(String(b.numero),"es",{numeric:true}));
+  if(!L.length){s.append(new Option("No hay máquinas pendientes en esta sala",""));s.disabled=true;return}
+  s.disabled=false;L.forEach(m=>s.append(new Option("N° "+m.numero+" · "+([m.modelo,m.falla].filter(Boolean).join(" · ")||"sin datos"),m.id)));
+  if(sel&&L.some(m=>m.id===sel))s.value=sel;
+}
+$("infSala").addEventListener("change",()=>fillInfNum());
+["infUsoSi","infUsoNo"].forEach(id=>$(id).addEventListener("change",()=>{const si=$("infUsoSi").checked;$("infRep").hidden=!si;if(si)$("infRep").focus()}));
+const autoNum=e=>{if(e.key!=="Enter"||e.shiftKey)return;const t=e.target,pos=t.selectionStart,antes=t.value.slice(0,pos),lin=antes.split("\n").pop(),m=lin.match(/^(\d+)[.)-]\s*(.*)$/);if(!m)return;e.preventDefault();if(!m[2].trim()){return}const ins="\n"+(Number(m[1])+1)+". ";t.value=antes+ins+t.value.slice(t.selectionEnd);t.selectionStart=t.selectionEnd=pos+ins.length};
+["infTrab","fProc"].forEach(id=>$(id).addEventListener("keydown",autoNum));
+function accionesDe(txt){return txt.split(/\n+/).map(l=>l.replace(/^\s*(\d+[.)-]|[-•*])\s*/,"").trim()).filter(l=>l.length>=3)}
+const repTxt=i=>i.sinRepuesto?"No fue necesario repuesto":i.repuesto?"Repuesto usado: "+i.repuesto:"";
+function openInf(m,modo){
+  infModo=modo==="sec"?"sec":"maq";const sec=infModo==="sec";
+  $("infT").textContent=sec?"Informar falla secundaria solucionada":"Informar reparación";
+  $("infIntro").textContent=sec?"Queda como aviso para el personal de la sala. La falla sigue activa hasta que el asistente o el administrador de la sala confirme que está solucionada.":"Queda como aviso para el personal de la sala. La máquina sigue pendiente hasta que el asistente o el administrador de la sala confirme que está reparada.";
+  $("infNumL").textContent=sec?"Falla secundaria":"N° de máquina";
+  const s=$("infSala");s.innerHTML="";S.salas.forEach((n,i)=>s.append(new Option(n,String(i))));
+  s.value=m?String(m.sala):(S.sala!=="all"?S.sala:"0");fillInfNum(m?m.id:null);
+  $("infHora").value=localDT(Date.now());$("infHora").max=localDT(Date.now()+6e4);$("infRep").value="";$("infRep").hidden=true;$("infUsoSi").checked=false;$("infUsoNo").checked=false;$("infTrab").value="1. ";
+  $("ovInf").hidden=false;setTimeout(()=>{const t=$("infTrab");t.focus();t.setSelectionRange(t.value.length,t.value.length)},60);
+}
+function closeInf(){$("ovInf").hidden=true}
+$("infCerrar").onclick=closeInf;$("infCancel").onclick=closeInf;
+$("ovInf").addEventListener("click",e=>{if(e.target.id==="ovInf")closeInf()});
+$("formInf").addEventListener("submit",async e=>{
+  e.preventDefault();if(!puedeInformar())return;
+  const sec=infModo==="sec";
+  const m=sec?S.sec.find(x=>x.id===$("infNum").value):S.maq.find(x=>x.id===$("infNum").value);if(!m){toast(sec?"Elegí la falla secundaria que solucionaste.":"Elegí la máquina que reparaste.");return}
+  const hora=new Date($("infHora").value).getTime();if(!hora){$("infHora").focus();toast("Indicá la fecha y hora de la reparación.");return}
+  if(hora>Date.now()+6e4){$("infHora").focus();toast("La hora de reparación no puede ser futura.");return}
+  const acc=accionesDe($("infTrab").value);if(acc.length<2){$("infTrab").focus();toast("Enumerá al menos 2 pasos del procedimiento, uno por línea.");return}
+  const trabajo=acc.map((a,k)=>(k+1)+". "+a).join("\n");
+  const uso=$("infUsoSi").checked?"si":$("infUsoNo").checked?"no":"";if(!uso){$("infUsoSi").focus();toast("Indicá si usaste repuesto o si no fue necesario.");return}
+  const repuesto=uso==="si"?$("infRep").value.trim():"";if(uso==="si"&&repuesto.length<3){$("infRep").focus();toast("Escribí qué repuesto usaste.");return}
+  const go=$("infGo");go.disabled=true;
+  try{
+    const base={sala:Number(m.sala),numero:m.numero,horaReparacion:hora,trabajo,repuesto,sinRepuesto:uso==="no",tecnicoNombre:await miNombre(),por:S.uid,creado:Date.now(),estado:"pendiente"};
+    await db.collection("informes").doc().set(sec?Object.assign({tipo:"sec",secId:m.id},base):Object.assign({maquinaId:m.id},base));
+    toast(sec?"Informe enviado. La sala lo va a ver en la falla secundaria de la N° "+m.numero:"Informe enviado. La sala lo va a ver en la máquina N° "+m.numero);closeInf();
+  }catch(err){writeErr(err)}
+  go.disabled=false;
+});
+async function resolverInformes(m,estado,extra){
+  const L=infPend(m);await Promise.allSettled(L.map(i=>db.collection("informes").doc(i.id).update(Object.assign({estado,resueltoPor:S.uid,resuelto:Date.now()},extra||{}))));
+}
+function renderInfBox(m){
+  const box=$("infBox");box.innerHTML="";const L=m?infPend(m):[];box.hidden=!L.length;if(!L.length)return;
+  L.forEach(i=>{
+    const d=el("div","infcard");
+    const h=el("div","infh");h.append(el("b",null,"Informe del técnico"),el("span",null," · "+(i.tecnicoNombre||"Técnico")));d.append(h);
+    const r=el("div",null,"Reparada el ");r.append(el("b",null,fmt(i.horaReparacion)));d.append(r);
+    {const tw=el("div",null,i.trabajo||"");tw.style.whiteSpace="pre-line";d.append(tw)}
+    if(repTxt(i))d.append(el("div","muted",repTxt(i)));
+    d.append(el("div","muted","Enviado "+fmt(i.creado)));
+    const acts=el("div","actions");acts.style.justifyContent="flex-start";
+    if(puedeEditar(m)&&m.estado!=="ok"){
+      const ok=el("button","btn primary","Confirmar como reparada");ok.type="button";
+      ok.onclick=()=>{$("eOk").checked=true;updRepBox();
+        if(!accionesDe($("fProc").value).length)$("fProc").value=i.trabajo||"";if(!$("fUsoSi").checked&&!$("fUsoNo").checked&&(i.repuesto||i.sinRepuesto))setUso(i.sinRepuesto?"no":"si",i.repuesto||"");
+        if(!$("fTec").value.trim()&&i.tecnicoNombre)$("fTec").value=i.tecnicoNombre;
+        $("repBox").scrollIntoView({block:"center",behavior:"smooth"});$("fDiag").focus();
+        toast("Completá el diagnóstico, revisá el procedimiento y tocá Guardar.")};
+      const no=el("button","btn","Descartar informe");no.type="button";
+      no.onclick=async()=>{if(no.dataset.c!=="1"){no.dataset.c="1";no.textContent="¿Descartar?";setTimeout(()=>{if(no.isConnected){no.dataset.c="";no.textContent="Descartar informe"}},4000);return}
+        try{await db.collection("informes").doc(i.id).update({estado:"descartado",resueltoPor:S.uid,resuelto:Date.now()});toast("Informe descartado")}catch(err){writeErr(err)}};
+      acts.append(ok,no);
+    }else if(i.por===S.uid&&!S.ro){
+      const del=el("button","btn","Anular mi informe");del.type="button";
+      del.onclick=async()=>{try{await db.collection("informes").doc(i.id).update({estado:"anulado",resuelto:Date.now()});toast("Informe anulado")}catch(err){writeErr(err)}};
+      acts.append(del);
+    }
+    if(acts.children.length)d.append(acts);
+    box.append(d);
+  });
+}
+const secInfPend=x=>S.inf.filter(i=>i.secId===x.id&&i.estado==="pendiente").sort((a,b)=>(b.creado||0)-(a.creado||0));
+async function resolverSecInf(x,estado){const L=secInfPend(x);await Promise.allSettled(L.map(i=>db.collection("informes").doc(i.id).update({estado,resueltoPor:S.uid,resuelto:Date.now()})))}
+function renderSecInfBox(x){
+  const box=$("secInfBox");box.innerHTML="";const L=x?secInfPend(x):[];box.hidden=!L.length;if(!L.length)return;
+  L.forEach(i=>{
+    const d=el("div","infcard");
+    const h=el("div","infh");h.append(el("b",null,"Informe del técnico"),el("span",null," · "+(i.tecnicoNombre||"Técnico")));d.append(h);
+    const r=el("div",null,"Solucionada el ");r.append(el("b",null,fmt(i.horaReparacion)));d.append(r);
+    {const tw=el("div",null,i.trabajo||"");tw.style.whiteSpace="pre-line";d.append(tw)}
+    if(repTxt(i))d.append(el("div","muted",repTxt(i)));
+    d.append(el("div","muted","Enviado "+fmt(i.creado)));
+    const acts=el("div","actions");acts.style.justifyContent="flex-start";
+    if(puedeEditar(x)&&secAbierta(x)){
+      const ok=el("button","btn primary","Confirmar como solucionada");ok.type="button";
+      ok.onclick=async()=>{ok.disabled=true;const now=Date.now();
+        try{const cn=await miNombre();await db.collection("secundarias").doc(x.id).update({estado:"ok",solucionada:now,solucionadoPor:i.por||S.uid,solucionadoNombre:i.tecnicoNombre||cn,confirmadoPor:S.uid,confirmadoNombre:cn,actualizado:now,actualizadoPor:S.uid});
+          await resolverSecInf(x,"confirmado");toast("Falla secundaria de la N° "+x.numero+" marcada como solucionada");closeSec()}
+        catch(err){ok.disabled=false;writeErr(err)}};
+      const no=el("button","btn","Descartar informe");no.type="button";
+      no.onclick=async()=>{if(no.dataset.c!=="1"){no.dataset.c="1";no.textContent="¿Descartar?";setTimeout(()=>{if(no.isConnected){no.dataset.c="";no.textContent="Descartar informe"}},4000);return}
+        try{await db.collection("informes").doc(i.id).update({estado:"descartado",resueltoPor:S.uid,resuelto:Date.now()});toast("Informe descartado")}catch(err){writeErr(err)}};
+      acts.append(ok,no);
+    }else if(i.por===S.uid&&!S.ro){
+      const del=el("button","btn","Anular mi informe");del.type="button";
+      del.onclick=async()=>{try{await db.collection("informes").doc(i.id).update({estado:"anulado",resuelto:Date.now()});toast("Informe anulado")}catch(err){writeErr(err)}};
+      acts.append(del);
+    }
+    if(acts.children.length)d.append(acts);
+    box.append(d);
+  });
+}
+$("btnInfMaq").onclick=()=>{const m=S.maq.find(x=>x.id===S.editId);if(!m)return;closeForm();openInf(m)};
+
+function mkTabla(cols,rows,onOpen){
+  const t=el("table","tbl"),th=el("thead"),hr=el("tr");cols.forEach(([h,c])=>{const x=el("th",c||null,h);hr.append(x)});th.append(hr);t.append(th);
+  const tb=el("tbody");rows.forEach(r=>{const tr=el("tr");tr.tabIndex=0;tr.dataset.e=r.e;r.cells.forEach((v,i)=>{const td=el("td",cols[i][1]||null);if(v instanceof Node)td.append(v);else td.textContent=v==null?"":String(v);tr.append(td)});tr.onclick=()=>onOpen(r.item);tr.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();onOpen(r.item)}};tb.append(tr)});
+  t.append(tb);return t;
+}
+function chipEl(txt,e){const c=el("span","chip",txt);c.dataset.e=e;return c}
+function tablaMaq(items){
+  const cols=[["Estado"],["Sala","nw"],["N°","n"],["Modelo","hn"],["Falla"],["Reportada","nw hn"],["Sin funcionar","nw"],["Avisos"]];
+  return mkTabla(cols,items.map(m=>{
+    const mod=el("span",null,m.modelo||"—");if(m.fabricante)mod.prepend(el("span","sub",m.fabricante));
+    const fa=el("span",null,m.falla||"—");if(m.detalle)fa.append(el("span","sub",m.detalle));
+    let dur;if(m.estado==="ok"){dur=el("span",null,diasTxt(diasSin(m)));dur.append(el("span","sub","reparada "+fmt(repTs(m))))}else{dur=el("span",null,diasTxt(m.creado?(Date.now()-m.creado)/864e5:null))}
+    const av=el("div","x");if(esVieja(m))av.append(el("span","tag dias",diasParada(m)+" días"));
+    if(m.estado!=="ok"){const ip=infPend(m);if(ip.length)av.append(el("span","tag inf","Técnico informó reparada"))}
+    const rqa=S.rq.filter(x=>abiertoRq(x)&&Number(x.sala)===Number(m.sala)&&String(x.numero).toLowerCase()===String(m.numero).toLowerCase());if(rqa.length)av.append(el("span","tag rqtag","Repuesto: "+ESTADO_RQ[rqa[0].estado]));
+    if(m.estado==="ok"&&m.reparadoPorTecnico)av.append(el("span","sub","Téc. "+m.reparadoPorTecnico));
+    return {item:m,e:m.estado,cells:[chipEl(ESTADO[m.estado]||m.estado,m.estado),salaName(m.sala),m.numero||"?",mod,fa,fmt(m.creado),dur,av]};
+  }),openForm);
+}
+function tablaRq(items){
+  const cols=[["Estado"],["Sala","nw"],["N°","n"],["Repuesto"],["Cant.","nw hn"],["Pidió","hn"],["Pedido","nw hn"],["Envío / nota"]];
+  return mkTabla(cols,items.map(x=>{
+    const st=el("div","x");if(x.urgente&&abiertoRq(x))st.append(chipEl("Urgente","fs"));st.append(chipEl(ESTADO_RQ[x.estado]||x.estado,CHIP_RQ[x.estado]));
+    const rp=el("span",null,x.tipo);if(x.detalle)rp.append(el("span","sub",x.detalle));
+    return {item:x,e:CHIP_RQ[x.estado],cells:[st,salaName(x.sala),x.numero||"?",rp,x.cantidad||1,x.tecnicoNombre||"",fmt(x.creado),(()=>{const w=el("div","x");const et=envTxt(x);if(et)w.append(el("span","tag env",et));const rt=recTxt(x);if(rt)w.append(el("span","tag inf",rt));if(x.envio&&x.envio.nota)w.append(el("span","sub",x.envio.nota));if(x.nota)w.append(el("span","sub","Nota: "+x.nota));return w})()]};
+  }),x=>openRq(x));
+}
+function aplicarVista(){document.querySelectorAll(".seg.vista button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.vista===S.vista)))}
+document.querySelectorAll(".seg.vista button").forEach(b=>b.onclick=()=>{S.vista=b.dataset.vista;try{localStorage.setItem("fs-vista",S.vista)}catch(e){}aplicarVista();renderList()});
+aplicarVista();
+/* --- fallas secundarias --- */
+const TIPOS_SEC=["Monitor superior / secundario","Topper / cartel","Iluminación / LED","Cerradura","Botón / botonera","Puerta / gabinete","Vidrio / acrílico","Pintura / carcasa","Parlante / sonido","Silla / asiento","Ploteo / gráfica","Pieza faltante","Otra"];
+TIPOS_SEC.forEach(t=>$("secTipo").append(new Option(t,t)));
+const secAbierta=x=>x.estado!=="ok";
+function filteredSec(){
+  const q=S.q.trim().toLowerCase();
+  return S.sec.filter(x=>{
+    if(!enAlcance(x))return false;
+    if(S.sala!=="all"&&String(x.sala)!==S.sala)return false;
+    if(S.f==="activas"&&!secAbierta(x))return false;
+    if(S.f==="ok"&&secAbierta(x))return false;
+    if(S.secInf&&!(secAbierta(x)&&secInfPend(x).length))return false;
+    if(q){const h=[x.numero,x.tipo,x.detalle,x.fabricante,x.modelo,x.ubicacion,salaName(x.sala)].join(" ").toLowerCase();if(!h.includes(q))return false}
+    return true;
+  }).sort((a,b)=>((secAbierta(a)?0:1)-(secAbierta(b)?0:1))||(secAbierta(a)?(a.creado||0)-(b.creado||0):(b.solucionada||0)-(a.solucionada||0)));
+}
+function renderSecList(){
+  const items=filteredSec(),box=$("list");box.innerHTML="";
+  box.classList.toggle("aslist",S.vista==="lista"&&items.length>0);
+  if(S.vista==="lista"){if(items.length)box.append(tablaSec(items))}
+  else items.forEach(x=>{
+    const e=secAbierta(x)?"sec":"ok";
+    const c=el("button","card");c.type="button";c.dataset.e=e;c.append(el("span","stripe"));
+    const b=el("div","body"),r1=el("div","row1"),n=el("div","num","N° "+(x.numero||"?"));
+    n.append(el("small",null,[x.fabricante,x.modelo].filter(Boolean).join(" · ")||"Sin modelo cargado"));
+    r1.append(n,chipEl(secAbierta(x)?"Activa":"Solucionada",e));b.append(r1);
+    const f=el("div","falla",x.tipo||"Falla secundaria");if(x.detalle)f.append(el("span",null," — "+x.detalle));b.append(f);
+    if(!secAbierta(x)){const ri=el("div","repinfo");ri.append(el("span",null,"Solucionada "));ri.append(el("b",null,fmt(x.solucionada)));if(x.solucionadoNombre){ri.append(el("span",null," · por "));ri.append(el("b",null,x.solucionadoNombre))}if(x.confirmadoNombre&&x.confirmadoNombre!==x.solucionadoNombre){ri.append(el("span",null," · confirmó "));ri.append(el("b",null,x.confirmadoNombre))}b.append(ri)}
+    const meta=el("div","meta");meta.append(el("span","tag",salaName(x.sala)));if(x.ubicacion)meta.append(el("span",null,x.ubicacion));
+    meta.append(el("span",null,"Cargada "+fmt(x.creado)+(x.creadoNombre?" por "+x.creadoNombre:"")));
+    if(secAbierta(x))meta.append(el("span",null,"Hace "+diasTxt((Date.now()-(x.creado||Date.now()))/864e5)));
+    if(secAbierta(x)){const ip=secInfPend(x);if(ip.length)meta.append(el("span","tag inf","Técnico informó solucionada "+fmt(ip[0].horaReparacion)))}
+    b.append(meta);c.append(b);c.onclick=()=>openSec(x);box.append(c);
+  });
+  const em=$("empty");em.hidden=items.length>0;
+  if(!items.length){
+    if(!S.sec.filter(enAlcance).length){$("emptyT").textContent="Sin fallas secundarias";$("emptyP").textContent=puedeCargar()?"Cargá acá lo que no funciona o falta pero no deja la máquina fuera de servicio: monitor superior, cerraduras, botones, iluminación.":"Cuando el personal de sala cargue una falla secundaria, aparece acá."}
+    else{$("emptyT").textContent="Nada para mostrar con este filtro";$("emptyP").textContent="Probá con otra sala, otro estado o borrá la búsqueda."}
+  }
+}
+function tablaSec(items){
+  const cols=[["Estado"],["Sala","nw"],["N°","n"],["Modelo","hn"],["Falla secundaria"],["Cargada","nw hn"],["Tiempo","nw"]];
+  return mkTabla(cols,items.map(x=>{
+    const e=secAbierta(x)?"sec":"ok";
+    const mod=el("span",null,x.modelo||"—");if(x.fabricante)mod.prepend(el("span","sub",x.fabricante));
+    const fa=el("span",null,x.tipo||"—");if(x.detalle)fa.append(el("span","sub",x.detalle));
+    let t;if(secAbierta(x)){t=el("span",null,diasTxt((Date.now()-(x.creado||Date.now()))/864e5));if(secInfPend(x).length)t.append(el("span","sub","Técnico informó solucionada"))}else{t=el("span",null,"Solucionada");t.append(el("span","sub",fmt(x.solucionada)+(x.solucionadoNombre?" · "+x.solucionadoNombre:"")))}
+    return {item:x,e,cells:[chipEl(secAbierta(x)?"Activa":"Solucionada",e),salaName(x.sala),x.numero||"?",mod,fa,fmt(x.creado),t]};
+  }),openSec);
+}
+function fillSecMod(fab,sel){const s=$("secMod");s.innerHTML="";s.append(new Option(fab?"Sin especificar":"Elegí primero el fabricante",""));const L=modsDe(fab);if(sel&&!L.some(m=>m.toLowerCase()===sel.toLowerCase()))L.push(sel);sortFabs(L).forEach(m=>s.append(new Option(m,m)));s.value=sel||""}
+function fillSecFab(sel){const s=$("secFab");s.innerHTML="";s.append(new Option("Sin especificar",""));const L=S.fabs.slice();if(sel&&!L.some(f=>f.toLowerCase()===sel.toLowerCase()))L.push(sel);sortFabs(L).forEach(f=>s.append(new Option(f,f)));s.value=sel||""}
+$("secFab").addEventListener("change",e=>fillSecMod(e.target.value,""));
+function fillDlSec(){const sala=$("secSala").value,d=$("dlSec");d.innerHTML="";const seen=new Set();[...S.maq,...S.sec].filter(m=>String(m.sala)===sala&&m.numero).forEach(m=>{if(seen.has(m.numero))return;seen.add(m.numero);const o=document.createElement("option");o.value=m.numero;o.label=[m.fabricante,m.modelo].filter(Boolean).join(" · ");d.append(o)})}
+$("secSala").addEventListener("change",fillDlSec);
+$("secNum").addEventListener("change",()=>{if(secEdit)return;const n=$("secNum").value.trim().toLowerCase(),sala=$("secSala").value;const ref=[...S.maq,...S.sec].find(m=>String(m.sala)===sala&&String(m.numero).toLowerCase()===n&&(m.fabricante||m.modelo));if(ref&&!$("secFab").value){fillSecFab(ref.fabricante||"");fillSecMod(ref.fabricante||"",ref.modelo||"");if(ref.ubicacion&&!$("secUbi").value)$("secUbi").value=ref.ubicacion}});
+let secEdit=null;
+function openSec(x){
+  secEdit=x||null;
+  const s=$("secSala");s.innerHTML="";const lim=deSala(rol())?miSalas():null;
+  S.salas.forEach((n,i)=>{if(x||!lim||lim.includes(i))s.append(new Option(n,String(i)))});
+  const ro=x?!puedeEditar(x):!puedeCargar();
+  s.value=x?String(x.sala):(S.sala!=="all"&&(!lim||lim.includes(Number(S.sala)))?S.sala:String(lim?lim[0]:0));
+  fillDlSec();
+  $("secT").textContent=x?("Falla secundaria · N° "+(x.numero||"")):"Cargar falla secundaria";$("secIntro").hidden=!!x;
+  $("secNum").value=x?x.numero||"":"";fillSecFab(x?x.fabricante||"":"");fillSecMod(x?x.fabricante||"":"",x?x.modelo||"":"");
+  $("secTipo").value=x?x.tipo:TIPOS_SEC[0];$("secUbi").value=x?x.ubicacion||"":"";$("secDet").value=x?x.detalle||"":"";
+  (x&&!secAbierta(x)?$("secEstS"):$("secEstP")).checked=true;
+  $("formSec").querySelectorAll("input,select,textarea").forEach(i=>i.disabled=ro);
+  s.disabled=ro||(!!x&&rol()!=="general")||(!x&&lim&&lim.length===1);
+  const note=$("secNote"),t=[];if(x){t.push("Cargada el "+fmt(x.creado)+(x.creadoNombre?" por "+x.creadoNombre:"")+".");if(!secAbierta(x))t.push("Solucionada el "+fmt(x.solucionada)+(x.solucionadoNombre?" por "+x.solucionadoNombre:"")+".");if(ro)t.push("Modo lectura.")}
+  note.hidden=!t.length;note.textContent=t.join(" ");
+  $("secBorrar").hidden=!x||!puedeBorrar(x);$("secDelC").hidden=true;$("secGo").hidden=ro;
+  $("secInfBtn").hidden=!x||!secAbierta(x)||!puedeInformar()||puedeEditar(x);renderSecInfBox(x);
+  $("ovSec").hidden=false;if(!x&&!ro)setTimeout(()=>$("secNum").focus(),60);
+}
+function closeSec(){$("ovSec").hidden=true;secEdit=null}
+$("secInfBtn").onclick=()=>{const x=secEdit;if(!x)return;closeSec();openInf(x,"sec")};
+$("secCerrar").onclick=closeSec;$("secCancel").onclick=closeSec;
+$("ovSec").addEventListener("click",e=>{if(e.target.id==="ovSec")closeSec()});
+$("formSec").addEventListener("submit",async e=>{
+  e.preventDefault();if(!db)return;const x=secEdit;
+  if(x?!puedeEditar(x):!puedeCargar())return;
+  const numero=$("secNum").value.trim();if(!numero){$("secNum").focus();toast("Falta el número de máquina.");return}
+  let sala=x?(rol()==="general"?Number($("secSala").value):Number(x.sala)):Number($("secSala").value);
+  if(!x&&deSala(rol())&&!esMiSala(sala))sala=miSala();
+  const ok=$("secEstS").checked,now=Date.now(),nombre=await miNombre();
+  const data={sala,numero,fabricante:$("secFab").value,modelo:$("secMod").value,tipo:$("secTipo").value,ubicacion:$("secUbi").value.trim(),detalle:$("secDet").value.trim(),estado:ok?"ok":"pend",actualizado:now,actualizadoPor:S.uid};
+  const go=$("secGo");go.disabled=true;
+  try{
+    if(x){const cerrar=ok&&secAbierta(x);if(cerrar){const ip=secInfPend(x);data.solucionada=now;data.solucionadoPor=ip.length?(ip[0].por||S.uid):S.uid;data.solucionadoNombre=ip.length?(ip[0].tecnicoNombre||nombre):nombre;data.confirmadoPor=S.uid;data.confirmadoNombre=nombre}if(!ok&&!secAbierta(x)){data.solucionada=null;data.solucionadoNombre="";data.confirmadoNombre=""}
+      await db.collection("secundarias").doc(x.id).update(data);toast("Cambios guardados");if(cerrar)resolverSecInf(x,"confirmado")}
+    else{Object.assign(data,{creado:now,creadoPor:S.uid,creadoNombre:nombre});if(ok){data.solucionada=now;data.solucionadoPor=S.uid;data.solucionadoNombre=nombre}
+      await db.collection("secundarias").doc().set(data);toast("Falla secundaria cargada")}
+    closeSec();
+  }catch(err){writeErr(err)}
+  go.disabled=false;
+});
+$("secBorrar").onclick=()=>{$("secDelC").hidden=false};
+$("secDelNo").onclick=()=>{$("secDelC").hidden=true};
+$("secDelSi").onclick=async()=>{const x=secEdit;if(!x||!puedeBorrar(x))return;try{await db.collection("secundarias").doc(x.id).delete();toast("Falla secundaria borrada");closeSec()}catch(e){writeErr(e)}};
+function csvSec(list){
+  const esc=v=>{v=v==null?"":String(v);return /[",;\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+  const rows=[["Sala","N° máquina","Fabricante","Modelo","Ubicación","Falla secundaria","Detalle","Estado","Cargada","Cargada por","Solucionada","Solucionada por","Confirmada por"]];
+  list.forEach(x=>rows.push([salaName(x.sala),x.numero,x.fabricante,x.modelo,x.ubicacion,x.tipo,x.detalle,secAbierta(x)?"Activa":"Solucionada",fmt(x.creado),x.creadoNombre,x.solucionada?fmt(x.solucionada):"",x.solucionadoNombre,x.confirmadoNombre||""]));
+  return "﻿"+rows.map(r=>r.map(esc).join(";")).join("\r\n");
+}
+
+/* --- reportes --- */
+function puedeReportes(){const r=rol();return r==="general"||r==="supervisor"||r==="admin_sala"||r==="tecnico"||(r==="asistente"&&miSalas().length>0)}
+const soloSec=()=>rol()==="tecnico"||rol()==="asistente";
+const DIA=864e5;
+function durTxt(ms){if(!(ms>0))return"—";const h=ms/36e5;if(h<1)return Math.round(ms/6e4)+" min";if(h<48)return (Math.round(h*10)/10).toString().replace(".",",")+" h";return (Math.round(h/24*10)/10).toString().replace(".",",")+" días"}
+function barList(title,rows,empty){
+  const w=el("div","rblock");w.append(el("h3",null,title));
+  if(!rows.length){w.append(el("p","muted",empty));return w}
+  const max=Math.max(...rows.map(r=>r[1]));
+  rows.forEach(([k,v])=>{const r=el("div","rbar");r.append(el("span","rk",k));const t=el("span","rt");const f=el("i");f.style.width=Math.max(4,Math.round(v/max*100))+"%";t.append(f);r.append(t,el("span","rv",String(v)));w.append(r)});
+  return w;
+}
+function renderRep(){
+  if($("ovRep").hidden)return;
+  if(soloSec())S.repTipo="sec";
+  $("repTipo").hidden=soloSec();document.querySelectorAll("#repTipo button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.rt===(S.repTipo||"maq"))));
+  $("repT").textContent=S.repTipo==="sec"?"Reporte de fallas secundarias":"Reportes";
+  if(S.repTipo==="sec"){renderRepSec();return}
+  const sv=salaVisible();const dias=Number($("repDias").value),salaF=sv&&sv.length===1?String(sv[0]):$("repSala").value,desde=Date.now()-dias*DIA;
+  const base=S.maq.filter(m=>enAlcance(m)&&(salaF==="all"||String(m.sala)===salaF));
+  const pend=base.filter(m=>m.estado!=="ok"),rep=base.filter(m=>(m.creado||0)>=desde),repd=base.filter(m=>m.estado==="ok"&&(m.reparada||0)>=desde);
+  const tiempos=repd.map(m=>(m.reparada||0)-(m.creado||0)).filter(x=>x>0);
+  const prom=tiempos.length?tiempos.reduce((a,b)=>a+b,0)/tiempos.length:0;
+  const B=$("repBody");B.innerHTML="";
+  const tiles=el("div","rtiles");
+  [["Pendientes ahora",String(pend.length),pend.filter(m=>m.estado==="fs").length+" F/S · "+pend.filter(m=>m.estado==="rep").length+" en rep."],
+   ["Reportadas",String(rep.length),"en los últimos "+dias+" días"],
+   ["Reparadas",String(repd.length),"en los últimos "+dias+" días"],
+   ["Tiempo promedio",durTxt(prom),"del reporte a la reparación"]].forEach(([a,b,c])=>{const t=el("div","rtile");t.append(el("span","rl",a),el("span","rn",b),el("span","rs",c));tiles.append(t)});
+  B.append(tiles);
+  if(salaF==="all"){
+    const wrap=el("div","rblock");wrap.append(el("h3",null,"Por sala"));
+    const sc=el("div","rtable");const tb=el("table");const th=el("tr");["Sala","Pend.","Reportadas","Reparadas","Prom. reparación"].forEach(h=>th.append(el("th",null,h)));tb.append(th);
+    S.salas.forEach((n,i)=>{if(sv&&!sv.includes(i))return;const L=S.maq.filter(m=>Number(m.sala)===i);const rr=L.filter(m=>m.estado==="ok"&&(m.reparada||0)>=desde);const ts=rr.map(m=>(m.reparada||0)-(m.creado||0)).filter(x=>x>0);
+      const tr=el("tr");[n,L.filter(m=>m.estado!=="ok").length,L.filter(m=>(m.creado||0)>=desde).length,rr.length,durTxt(ts.length?ts.reduce((a,b)=>a+b,0)/ts.length:0)].forEach((v,j)=>tr.append(el(j?"td":"th",null,String(v))));tb.append(tr)});
+    sc.append(tb);wrap.append(sc);B.append(wrap);
+  }
+  const cnt=(list,key)=>{const m=new Map();list.forEach(x=>{const k=key(x);if(k)m.set(k,(m.get(k)||0)+1)});return [...m.entries()].sort((a,b)=>b[1]-a[1]).slice(0,8)};
+  const grid=el("div","rgrid");
+  grid.append(barList("Fallas más frecuentes",cnt(rep,m=>m.falla),"Sin reportes en el período."));
+  grid.append(barList("Modelos con más fallas",cnt(rep,m=>[m.fabricante,m.modelo].filter(Boolean).join(" ")),"Sin reportes con modelo cargado."));
+  B.append(grid);
+  const rep2=cnt(rep,m=>salaName(m.sala)+" · N° "+m.numero).filter(x=>x[1]>1);
+  B.append(barList("Máquinas con fallas repetidas",rep2,"Ninguna máquina se reportó más de una vez en el período."));
+  const viejas=pend.slice().sort((a,b)=>(a.creado||0)-(b.creado||0)).slice(0,6);
+  const vw=el("div","rblock");vw.append(el("h3",null,"Pendientes más antiguas"));
+  if(!viejas.length)vw.append(el("p","muted","No hay máquinas pendientes."));
+  viejas.forEach(m=>{const r=el("button","rold");r.type="button";const ch=el("span","chip",ESTADO[m.estado]);ch.dataset.e=m.estado;r.append(el("span","rk",salaName(m.sala)+" · N° "+m.numero+" · "+(m.falla||"")),ch,el("span","rv",durTxt(Date.now()-(m.creado||Date.now()))));r.onclick=()=>{$("ovRep").hidden=true;openForm(m)};vw.append(r)});
+  B.append(vw);
+  B.append(el("p","muted","Los reportes se calculan con las máquinas que hay en el tablero. Las que se archivaron quedan en los CSV exportados."));
+}
+function renderRepSec(){
+  const sv=salaVisible(),dias=Number($("repDias").value),salaF=sv&&sv.length===1?String(sv[0]):$("repSala").value,desde=Date.now()-dias*DIA;
+  const base=S.sec.filter(x=>enAlcance(x)&&(salaF==="all"||String(x.sala)===salaF));
+  const act=base.filter(secAbierta),carg=base.filter(x=>(x.creado||0)>=desde),sol=base.filter(x=>!secAbierta(x)&&(x.solucionada||0)>=desde);
+  const ts=sol.map(x=>(x.solucionada||0)-(x.creado||0)).filter(v=>v>0),prom=ts.length?ts.reduce((a,b)=>a+b,0)/ts.length:0;
+  const B=$("repBody");B.innerHTML="";
+  const tiles=el("div","rtiles");
+  [["Activas ahora",String(act.length),act.length?"la más antigua: "+diasTxt((Date.now()-Math.min(...act.map(x=>x.creado||Date.now())))/864e5):"ninguna"],
+   ["Cargadas",String(carg.length),"en los últimos "+dias+" días"],
+   ["Solucionadas",String(sol.length),"en los últimos "+dias+" días"],
+   ["Tiempo promedio",durTxt(prom),"de la carga a la solución"]].forEach(([a,b,c])=>{const t=el("div","rtile");t.append(el("span","rl",a),el("span","rn",b),el("span","rs",c));tiles.append(t)});
+  B.append(tiles);
+  if(salaF==="all"){
+    const wrap=el("div","rblock");wrap.append(el("h3",null,"Por sala"));
+    const sc=el("div","rtable"),tb=el("table"),th=el("tr");["Sala","Activas","Cargadas","Solucionadas","Prom. solución"].forEach(h=>th.append(el("th",null,h)));tb.append(th);
+    S.salas.forEach((n,i)=>{if(sv&&!sv.includes(i))return;const L=S.sec.filter(x=>Number(x.sala)===i);const ss=L.filter(x=>!secAbierta(x)&&(x.solucionada||0)>=desde);const t2=ss.map(x=>(x.solucionada||0)-(x.creado||0)).filter(v=>v>0);
+      const tr=el("tr");[n,L.filter(secAbierta).length,L.filter(x=>(x.creado||0)>=desde).length,ss.length,durTxt(t2.length?t2.reduce((a,b)=>a+b,0)/t2.length:0)].forEach((v,j)=>tr.append(el(j?"td":"th",null,String(v))));tb.append(tr)});
+    sc.append(tb);wrap.append(sc);B.append(wrap);
+  }
+  const cnt=(list,key)=>{const m=new Map();list.forEach(x=>{const k=key(x);if(k)m.set(k,(m.get(k)||0)+1)});return [...m.entries()].sort((a,b)=>b[1]-a[1]).slice(0,8)};
+  const grid=el("div","rgrid");
+  grid.append(barList("Tipos más frecuentes (activas)",cnt(act,x=>x.tipo),"No hay fallas secundarias activas."));
+  grid.append(barList("Modelos con más fallas activas",cnt(act,x=>[x.fabricante,x.modelo].filter(Boolean).join(" ")),"Sin fallas activas con modelo cargado."));
+  B.append(grid);
+  B.append(barList("Máquinas con varias fallas activas",cnt(act,x=>salaName(x.sala)+" · N° "+x.numero).filter(x=>x[1]>1),"Ninguna máquina tiene más de una falla secundaria activa."));
+  const viejas=act.slice().sort((a,b)=>(a.creado||0)-(b.creado||0)).slice(0,8);
+  const vw=el("div","rblock");vw.append(el("h3",null,"Activas más antiguas"));
+  if(!viejas.length)vw.append(el("p","muted","No hay fallas secundarias activas."));
+  viejas.forEach(x=>{const r=el("button","rold");r.type="button";r.append(el("span","rk",salaName(x.sala)+" · N° "+x.numero+" · "+(x.tipo||"")),chipEl("Activa","sec"),el("span","rv",durTxt(Date.now()-(x.creado||Date.now()))));r.onclick=()=>{$("ovRep").hidden=true;openSec(x)};vw.append(r)});
+  B.append(vw);
+  B.append(el("p","muted","Las fallas secundarias no cuentan como máquinas fuera de servicio ni generan alertas."));
+}
+document.querySelectorAll("#repTipo button").forEach(b=>b.onclick=()=>{S.repTipo=b.dataset.rt;renderRep()});
+function fillRepSala(){const s=$("repSala"),sv=salaVisible(),v=s.value||"all";s.innerHTML="";if(sv&&sv.length===1){s.append(new Option(salaName(sv[0]),String(sv[0])));s.value=String(sv[0]);s.disabled=true;return}s.disabled=false;s.append(new Option(sv?"Mis salas":"Todas las salas","all"));S.salas.forEach((n,i)=>{if(!sv||sv.includes(i))s.append(new Option(n,String(i)))});s.value=[...s.options].some(o=>o.value===v)?v:"all"}
+$("btnRep").onclick=()=>{if(!S.repTipo)S.repTipo=S.v==="sec"?"sec":"maq";fillRepSala();$("ovRep").hidden=false;renderRep()};
+$("repDias").addEventListener("change",renderRep);$("repSala").addEventListener("change",renderRep);
+$("repCerrar").onclick=()=>$("ovRep").hidden=true;
+$("ovRep").addEventListener("click",e=>{if(e.target.id==="ovRep")$("ovRep").hidden=true});
+
+/* --- CSV y archivo --- */
+function csvFor(list){
+  const esc=v=>{v=v==null?"":String(v);return /[",;\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+  const rows=[["Sala","N° máquina","Fabricante","Modelo","Ubicación","Falla","Detalle","Estado","Técnico","Observaciones","Reportada","Reparada","Días sin funcionar","Reparada por (técnico)","Confirmada por","Diagnóstico","Procedimiento","Repuesto usado","Última actualización"]];
+  list.forEach(m=>rows.push([salaName(m.sala),m.numero,m.fabricante,m.modelo,m.ubicacion,m.falla,m.detalle,ESTADO[m.estado],m.tecnico,m.obs,fmt(m.creado),m.estado==="ok"?fmt(repTs(m)):"",m.estado==="ok"&&diasSin(m)!=null?String(Math.round(diasSin(m)*10)/10).replace(".",","):"",m.estado==="ok"?(m.reparadoPorTecnico||m.tecnico||""):"",m.estado==="ok"?(m.confirmadoNombre||""):"",m.diagnostico||"",m.procedimiento||"",m.sinRepuesto?"No fue necesario":(m.repuesto||""),fmt(m.actualizado)]));
+  return "﻿"+rows.map(r=>r.map(esc).join(";")).join("\r\n");
+}
+const hoy=()=>new Date().toISOString().slice(0,10);
+$("btnCsv").onclick=async()=>{if(!downloads)return;try{await downloads.save(S.v==="pad"?{filename:"padron-maquinas-"+hoy()+".csv",data:csvPad(filteredPad())}:S.v==="rq"?{filename:"pedidos-repuestos-"+hoy()+".csv",data:csvRq(filteredRq())}:S.v==="sec"?{filename:"fallas-secundarias-"+hoy()+".csv",data:csvSec(filteredSec())}:{filename:"maquinas-fuera-de-servicio-"+hoy()+".csv",data:csvFor(filtered())})}catch(e){if(e&&e.code!=="declined")toast("No se pudo exportar el archivo.")}};
+function arcList(){const lim=Date.now()-Number($("arcDias").value)*864e5,r=rol();return S.maq.filter(m=>m.estado==="ok"&&((m.reparada||m.actualizado||0)<lim)&&(r==="general"||esMiSala(m.sala)))}
+function arcInfo(){const n=arcList().length,alc=rol()==="general"?"":" de "+nombresMisSalas();$("arcInfo").textContent=(n?("Se van a exportar y borrar "+n+" máquinas reparadas"+alc+"."):("No hay máquinas reparadas"+alc+" con esa antigüedad."))+" El tablero tiene hoy "+S.maq.length+" máquinas.";$("arcGo").disabled=!n}
+$("btnArc").onclick=()=>{arcInfo();$("ovArc").hidden=false};
+$("arcDias").addEventListener("change",arcInfo);
+$("arcCerrar").onclick=$("arcCancel").onclick=()=>$("ovArc").hidden=true;
+$("formArc").addEventListener("submit",async e=>{
+  e.preventDefault();if(!puedeArchivar())return;const list=arcList();if(!list.length)return;
+  const go=$("arcGo");go.disabled=true;
+  try{await downloads.save({filename:"archivo-maquinas-reparadas-"+hoy()+".csv",data:csvFor(list)})}
+  catch(err){go.disabled=false;toast(err&&err.code==="declined"?"No se guardó el archivo, así que no se borró nada.":"No se pudo exportar. No se borró nada.");return}
+  let ok=0;
+  for(let i=0;i<list.length;i+=10){const r=await Promise.allSettled(list.slice(i,i+10).map(m=>db.collection("maquinas").doc(m.id).delete()));ok+=r.filter(x=>x.status==="fulfilled").length;$("arcInfo").textContent="Borrando… "+ok+" de "+list.length}
+  $("ovArc").hidden=true;go.disabled=false;
+  toast(ok===list.length?("Archivadas "+ok+" máquinas"):("Se archivaron "+ok+" de "+list.length+". Volvé a intentar para el resto."));
+});
+
+/* --- padrón de máquinas (solo administrador general y supervisores) --- */
+const MOTIVOS_BAJA=["Retirada del salón","Traslado a otra sala","Reemplazo por otra máquina","Rotura sin reparación","Otro"];
+MOTIVOS_BAJA.forEach(m=>$("pMot").append(new Option(m,m)));
+const ACC_PAD={alta:"Alta",importada:"Alta (importada)",baja:"Baja",reactivada:"Reactivada",cambio:"Cambio"};
+let padSub=false,padEdit=null;
+function puedePadron(){const r=rol();return !!db&&(r==="general"||r==="supervisor")}
+function puedeEditPad(){return puedePadron()&&!S.ro}
+function padAct(p){return p.estado!=="baja"}
+function fabKey(p){return p.fabricante||"Sin fabricante"}
+const normTxt=s=>String(s==null?"":s).normalize("NFD").replace(/[̀-ͯ]/g,"").trim().toLowerCase();
+const numCmp=(a,b)=>String(a.numero).localeCompare(String(b.numero),"es",{numeric:true});
+const ymd=ts=>{const d=new Date(ts);return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())};
+const ymdTxt=ts=>ts?new Date(ts).toLocaleDateString("es-AR"):"—";
+const fechaInp=v=>v?new Date(v+"T12:00").getTime():0;
+function subPadron(){
+  if(padSub||!(puedePadron()||puedeCargar()))return;padSub=true;
+  sub("padron",deSala(rol())?miSalas():null,L=>{S.pad=L;S.padReady=true;if(S.v==="pad")renderAll();if(!$("ovImp").hidden&&impData)impPreview();if(!$("ov").hidden&&!S.editId)fillNumSel()},()=>{padSub=false;S.padReady=true;if(S.v==="pad")renderAll()});
+}
+const fueraAhora=p=>S.maq.some(m=>m.estado!=="ok"&&Number(m.sala)===Number(p.sala)&&String(m.numero).toLowerCase()===String(p.numero).toLowerCase());
+/* lista de N° del padrón en la carga de máquinas */
+function padSala(sala){return S.pad.filter(p=>padAct(p)&&Number(p.sala)===Number(sala))}
+function fillNumSel(keep){
+  const s=$("fNumSel"),inp=$("fNum");
+  if(S.editId||!padSala($("fSala").value).length){s.hidden=true;inp.hidden=false;return}
+  const fab=$("fFab").value,mod=$("fMod").value,cur=keep!=null?keep:s.value;
+  let L=padSala($("fSala").value);
+  if(fab&&fab!=="__new")L=L.filter(p=>(p.fabricante||"").toLowerCase()===fab.toLowerCase());
+  if(mod&&mod!=="__new")L=L.filter(p=>(p.modelo||"").toLowerCase()===mod.toLowerCase());
+  L.sort(numCmp);
+  s.innerHTML="";s.append(new Option(L.length?"Elegí el N° ("+L.length+(L.length===1?" máquina)":" máquinas)"):"Ninguna máquina con ese fabricante y modelo",""));
+  L.forEach(p=>{const pend=S.maq.some(m=>m.estado!=="ok"&&Number(m.sala)===Number(p.sala)&&String(m.numero).toLowerCase()===String(p.numero).toLowerCase());
+    const o=new Option(p.numero+" · "+([p.modelo,p.juego].filter(Boolean).join(" · ")||p.fabricante||"")+(pend?" — ya está cargada":""),p.numero);o.disabled=pend;s.append(o)});
+  s.append(new Option("Otro N° (no está en el padrón)…","__otro"));
+  s.hidden=false;
+  s.value=cur&&[...s.options].some(o=>o.value===cur&&!o.disabled)?cur:"";
+  if(s.value==="__otro")inp.hidden=false;else{inp.hidden=true;inp.value=s.value}
+}
+function aplicarPad(p){
+  if(p.fabricante&&$("fFab").value!==p.fabricante){fillFab(p.fabricante,true);fillMod(p.fabricante,p.modelo||"")}
+  else if(p.modelo&&$("fMod").value!==p.modelo)fillMod($("fFab").value,p.modelo);
+  if(p.ubicacion&&!$("fUbi").value)$("fUbi").value=p.ubicacion;
+}
+$("fNumSel").addEventListener("change",e=>{const v=e.target.value,inp=$("fNum");
+  if(v==="__otro"){inp.hidden=false;inp.value="";inp.focus();return}
+  inp.hidden=true;inp.value=v;const p=padSala($("fSala").value).find(x=>String(x.numero)===v);if(p){aplicarPad(p);fillNumSel(v)}});
+$("fFab").addEventListener("change",()=>fillNumSel());
+$("fMod").addEventListener("change",()=>fillNumSel());
+$("fSala").addEventListener("change",()=>fillNumSel(""));
+$("fNum").addEventListener("change",()=>{if(S.editId)return;const v=$("fNum").value.trim().toLowerCase();const p=padSala($("fSala").value).find(x=>String(x.numero).toLowerCase()===v);if(p&&!$("fFab").value)aplicarPad(p)});
+function dupPad(sala,numero,exceptId){return S.pad.some(x=>x.id!==exceptId&&padAct(x)&&Number(x.sala)===Number(sala)&&String(x.numero).toLowerCase()===String(numero).toLowerCase())}
+function basePad(){return S.pad.filter(p=>(S.sala==="all"||String(p.sala)===S.sala)&&(S.f==="all"||(S.f==="ok"?!padAct(p):padAct(p))))}
+function filteredPad(){
+  const q=normTxt(S.q);
+  return basePad().filter(p=>{
+    if(S.padFab!=null&&(p.fabricante||"")!==S.padFab)return false;
+    if(q){const h=normTxt([p.numero,p.fabricante,p.modelo,p.juego,p.ubicacion,p.serie,p.obs,p.motivoBaja,salaName(p.sala)].join(" "));if(!h.includes(q))return false}
+    return true;
+  });
+}
+function gruposFab(list){
+  const m=new Map();list.forEach(p=>{const k=fabKey(p);if(!m.has(k))m.set(k,[]);m.get(k).push(p)});
+  return [...m.entries()].sort((a,b)=>((a[0]==="Sin fabricante")-(b[0]==="Sin fabricante"))||a[0].localeCompare(b[0],"es"))
+    .map(([k,l])=>[k,l.sort((x,y)=>(Number(x.sala)-Number(y.sala))||String(x.modelo||"").localeCompare(String(y.modelo||""),"es")||numCmp(x,y))]);
+}
+function padChip(p){return !padAct(p)?chipEl("Baja","mute"):fueraAhora(p)?chipEl("F/S ahora","fs"):chipEl("Activa","ok")}
+function renderPadList(){
+  const box=$("list");box.innerHTML="";
+  const base=basePad(),items=filteredPad();
+  box.classList.toggle("aslist",S.vista==="lista"&&items.length>0);
+  if(base.length){
+    const sm=el("div","pfabs");
+    const mkb=(label,val,n)=>{const b=el("button",null,label);b.type="button";b.append(el("b",null,String(n)));b.setAttribute("aria-pressed",String(S.padFab===val));b.onclick=()=>{S.padFab=S.padFab===val||val==null?null:val;renderList()};sm.append(b)};
+    mkb("Todos los fabricantes",null,base.length);
+    gruposFab(base).forEach(([k,l])=>mkb(k,k==="Sin fabricante"?"":k,l.length));
+    if(S.padFab!=null&&!base.some(p=>(p.fabricante||"")===S.padFab))S.padFab=null;
+    box.append(sm);
+  }
+  if(S.vista==="lista"&&items.length){
+    const cols=[["Estado"],["Fabricante"],["Modelo"],["Juego","hn"],["N°","n"],["Sala","nw"],["Isla / pos.","hn"],["Alta / baja","nw hn"]];
+    const rows=gruposFab(items).flatMap(([k,l])=>l).map(p=>({item:p,e:padAct(p)?"ok":"baja",cells:[padChip(p),p.fabricante||"—",p.modelo||"—",p.juego||"",p.numero||"?",salaName(p.sala),p.ubicacion||"",padAct(p)?"Alta "+ymdTxt(p.alta):"Baja "+ymdTxt(p.baja)+(p.motivoBaja?" · "+p.motivoBaja:"")]}));
+    box.append(mkTabla(cols,rows,openPad));
+  }else{
+    gruposFab(items).forEach(([k,l])=>{
+      const h=el("div","pgh");h.append(el("h2",null,k),el("span",null,l.length+(l.length===1?" máquina":" máquinas")));box.append(h);
+      l.forEach(p=>{
+        const c=el("button","card pcard");c.type="button";c.dataset.e=padAct(p)?"ok":"baja";c.append(el("span","stripe"));
+        const b=el("div","body"),r1=el("div","row1"),n=el("div","num","N° "+(p.numero||"?"));n.append(el("small",null,[p.modelo,p.juego].filter(Boolean).join(" · ")||"Sin modelo"));
+        r1.append(n,padChip(p));b.append(r1);
+        const meta=el("div","meta");if(S.sala==="all")meta.append(el("span","tag",salaName(p.sala)));
+        if(p.ubicacion)meta.append(el("span",null,p.ubicacion));if(p.serie)meta.append(el("span",null,"Serie "+p.serie));
+        meta.append(el("span",null,padAct(p)?"Alta "+ymdTxt(p.alta):"Baja "+ymdTxt(p.baja)+(p.motivoBaja?" · "+p.motivoBaja:"")));
+        b.append(meta);c.append(b);c.onclick=()=>openPad(p);box.append(c);
+      });
+    });
+  }
+  const e=$("empty");e.hidden=items.length>0;
+  if(!items.length){
+    if(!S.padReady){$("emptyT").textContent="Cargando padrón…";$("emptyP").textContent="Trayendo las máquinas de las 5 salas."}
+    else if(!S.pad.length){$("emptyT").textContent="Padrón vacío";$("emptyP").textContent="Tocá “Importar Excel” para cargar el padrón completo de una vez, o “Agregar máquina” para cargarlas de a una."}
+    else{$("emptyT").textContent="Nada para mostrar con este filtro";$("emptyP").textContent="Probá con otra sala, otro fabricante o borrá la búsqueda."}
+  }
+}
+function fillSelFab(s,inp,sel,canAdd){s.innerHTML="";s.append(new Option("Sin especificar",""));const L=S.fabs.slice();if(sel&&!L.some(f=>f.toLowerCase()===sel.toLowerCase()))L.push(sel);sortFabs(L).forEach(f=>s.append(new Option(f,f)));if(canAdd)s.append(new Option("+ Agregar fabricante nuevo…","__new"));s.value=sel||"";inp.hidden=true;inp.value=""}
+function fillSelMod(s,inp,fab,sel,canAdd){s.innerHTML="";s.append(new Option(fab&&fab!=="__new"?"Sin especificar":"Elegí primero el fabricante",""));const L=fab==="__new"?[]:modsDe(fab);if(sel&&!L.some(m=>m.toLowerCase()===sel.toLowerCase()))L.push(sel);sortFabs(L).forEach(m=>s.append(new Option(m,m)));if(canAdd&&fab)s.append(new Option("+ Agregar modelo nuevo…","__new"));s.value=sel||"";inp.hidden=true;inp.value=""}
+$("pFab").addEventListener("change",e=>{const n=e.target.value==="__new";$("pFabNew").hidden=!n;if(n)$("pFabNew").focus();fillSelMod($("pMod"),$("pModNew"),e.target.value,"",puedeEditPad())});
+$("pMod").addEventListener("change",e=>{const n=e.target.value==="__new";$("pModNew").hidden=!n;if(n)$("pModNew").focus()});
+function openPad(p){
+  padEdit=p||null;const ro=!puedeEditPad();
+  const s=$("pSala");s.innerHTML="";S.salas.forEach((n,i)=>s.append(new Option(n,String(i))));
+  s.value=p?String(p.sala):(S.sala!=="all"?S.sala:"0");
+  $("pNum").value=p?p.numero||"":"";
+  fillSelFab($("pFab"),$("pFabNew"),p?p.fabricante||"":(S.padFab||""),!ro);
+  fillSelMod($("pMod"),$("pModNew"),$("pFab").value,p?p.modelo||"":"",!ro);
+  $("pJuego").value=p?p.juego||"":"";$("pUbi").value=p?p.ubicacion||"":"";$("pSerie").value=p?p.serie||"":"";$("pObs").value=p?p.obs||"":"";
+  $("pAlta").value=ymd(p&&p.alta?p.alta:Date.now());
+  $("formPad").querySelectorAll("input,select").forEach(i=>i.disabled=ro);
+  $("padT").textContent=p?("N° "+(p.numero||"")+" · "+salaName(p.sala)):"Agregar máquina al padrón";
+  const t=[];
+  if(p&&!padAct(p))t.push("Dada de baja el "+ymdTxt(p.baja)+(p.motivoBaja?" — "+p.motivoBaja:"")+(p.motivoDetalle?": "+p.motivoDetalle:"")+(p.bajaNombre?" ("+p.bajaNombre+")":"")+".");
+  if(p&&padAct(p)&&fueraAhora(p))t.push("Esta máquina figura fuera de servicio en el tablero.");
+  if(ro)t.push("Modo lectura.");
+  $("padNote").hidden=!t.length;$("padNote").textContent=t.join(" ");
+  const act=p?padAct(p):true;
+  $("pBaja").hidden=!p||!act||ro;$("pReact").hidden=!p||act||ro;$("pBorrar").hidden=!p||ro||rol()!=="general";
+  $("pBajaBox").hidden=true;$("pDelC").hidden=true;$("pGo").hidden=ro;
+  renderPadHist(p);$("ovPad").hidden=false;if(!p&&!ro)setTimeout(()=>$("pNum").focus(),60);
+}
+function renderPadHist(p){
+  const h=$("pHist");h.innerHTML="";const L=p&&Array.isArray(p.historial)?p.historial:[];h.hidden=!L.length;if(!L.length)return;
+  h.append(el("div",null,"Historial"));
+  L.slice().reverse().slice(0,15).forEach(x=>{const d=el("div",null,fmt(x.t)+" · ");d.append(el("b",null,ACC_PAD[x.accion]||x.accion));if(x.detalle)d.append(document.createTextNode(" · "+x.detalle));if(x.nombre)d.append(document.createTextNode(" · "+x.nombre));h.append(d)});
+}
+function closePad(){$("ovPad").hidden=true;padEdit=null}
+$("padCerrar").onclick=closePad;$("pCancel").onclick=closePad;
+$("ovPad").addEventListener("click",e=>{if(e.target.id==="ovPad")closePad()});
+$("formPad").addEventListener("submit",async e=>{
+  e.preventDefault();if(!puedeEditPad())return;const p=padEdit;
+  const numero=$("pNum").value.trim();if(!numero){$("pNum").focus();toast("Falta el número de máquina.");return}
+  const sala=Number($("pSala").value);
+  if((p?padAct(p):true)&&dupPad(sala,numero,p&&p.id)){toast("La N° "+numero+" ya está activa en el padrón de "+salaName(sala)+".");return}
+  let fabricante=$("pFab").value;
+  if(fabricante==="__new"){const nv=$("pFabNew").value.trim();if(!nv){$("pFabNew").focus();toast("Escribí el nombre del fabricante nuevo.");return}fabricante=await addFab(nv)}
+  let modelo=$("pMod").value;
+  if(modelo==="__new"){const nv=$("pModNew").value.trim();if(!nv){$("pModNew").focus();toast("Escribí el nombre del modelo nuevo.");return}modelo=fabricante?await addMod(fabricante,nv):nv}
+  const now=Date.now(),nombre=await miNombre(),alta=fechaInp($("pAlta").value)||(p&&p.alta)||now;
+  const data={sala,numero,fabricante,modelo,juego:$("pJuego").value.trim(),ubicacion:$("pUbi").value.trim(),serie:$("pSerie").value.trim(),obs:$("pObs").value.trim(),alta,actualizado:now,actualizadoPor:S.uid};
+  const go=$("pGo");go.disabled=true;
+  try{
+    if(p){
+      const ch=[];if(Number(p.sala)!==sala)ch.push("sala "+salaName(p.sala)+" → "+salaName(sala));if(String(p.numero)!==numero)ch.push("N° "+p.numero+" → "+numero);
+      const mv=[p.fabricante,p.modelo].filter(Boolean).join(" "),mn=[fabricante,modelo].filter(Boolean).join(" ");if(mv!==mn)ch.push("modelo "+(mv||"—")+" → "+(mn||"—"));if((p.juego||"")!==data.juego)ch.push("juego "+(p.juego||"—")+" → "+(data.juego||"—"));
+      if((p.ubicacion||"")!==data.ubicacion)ch.push("ubicación "+(data.ubicacion||"—"));if((p.serie||"")!==data.serie)ch.push("serie "+(data.serie||"—"));
+      if(ch.length)data.historial=[...(p.historial||[]),{t:now,accion:"cambio",nombre,detalle:ch.join(" · ")}].slice(-40);
+      await db.collection("padron").doc(p.id).update(data);toast("Cambios guardados");
+    }else{
+      Object.assign(data,{estado:"activa",creado:now,creadoPor:S.uid,altaNombre:nombre,historial:[{t:now,accion:"alta",nombre,detalle:"alta "+ymdTxt(alta)}]});
+      await db.collection("padron").doc().set(data);toast("N° "+numero+" agregada al padrón de "+salaName(sala));
+    }
+    closePad();
+  }catch(err){writeErr(err)}
+  go.disabled=false;
+});
+$("pBaja").onclick=()=>{$("pBajaBox").hidden=false;$("pMot").value=MOTIVOS_BAJA[0];$("pFecha").value=ymd(Date.now());$("pMotDet").value="";$("pMot").focus()};
+$("pBajaNo").onclick=()=>{$("pBajaBox").hidden=true};
+$("pBajaSi").onclick=async()=>{
+  const p=padEdit;if(!p||!puedeEditPad())return;
+  const motivo=$("pMot").value,det=$("pMotDet").value.trim();if(motivo==="Otro"&&!det){$("pMotDet").focus();toast("Contá el motivo de la baja.");return}
+  const f=fechaInp($("pFecha").value)||Date.now(),now=Date.now(),nombre=await miNombre();
+  try{await db.collection("padron").doc(p.id).update({estado:"baja",baja:f,bajaNombre:nombre,motivoBaja:motivo,motivoDetalle:det,actualizado:now,actualizadoPor:S.uid,historial:[...(p.historial||[]),{t:now,accion:"baja",nombre,detalle:motivo+(det?" — "+det:"")+" ("+ymdTxt(f)+")"}].slice(-40)});
+    toast("N° "+p.numero+" dada de baja del padrón");closePad()}catch(err){writeErr(err)}
+};
+$("pReact").onclick=async()=>{
+  const p=padEdit;if(!p||!puedeEditPad())return;
+  if(dupPad(p.sala,p.numero,p.id)){toast("Ya hay otra N° "+p.numero+" activa en "+salaName(p.sala)+".");return}
+  const now=Date.now(),nombre=await miNombre();
+  try{await db.collection("padron").doc(p.id).update({estado:"activa",baja:null,bajaNombre:"",motivoBaja:"",motivoDetalle:"",actualizado:now,actualizadoPor:S.uid,historial:[...(p.historial||[]),{t:now,accion:"reactivada",nombre}].slice(-40)});
+    toast("N° "+p.numero+" reactivada");closePad()}catch(err){writeErr(err)}
+};
+$("pBorrar").onclick=()=>{$("pDelC").hidden=false};
+$("pDelNo").onclick=()=>{$("pDelC").hidden=true};
+$("pDelSi").onclick=async()=>{const p=padEdit;if(!p||rol()!=="general")return;try{await db.collection("padron").doc(p.id).delete();toast("Borrada del padrón");closePad()}catch(err){writeErr(err)}};
+function csvPad(list){
+  const esc=v=>{v=v==null?"":String(v);return /[",;\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+  const rows=[["Sala","N° máquina","Fabricante","Modelo","Juego","Isla / posición","N° de serie","Estado","Fecha de alta","Fecha de baja","Motivo de baja","Detalle de baja","Observaciones"]];
+  list.slice().sort((a,b)=>(Number(a.sala)-Number(b.sala))||fabKey(a).localeCompare(fabKey(b),"es")||String(a.modelo||"").localeCompare(String(b.modelo||""),"es")||numCmp(a,b))
+    .forEach(p=>rows.push([salaName(p.sala),p.numero,p.fabricante,p.modelo,p.juego||"",p.ubicacion,p.serie,padAct(p)?"Activa":"Baja",ymdTxt(p.alta),p.baja?ymdTxt(p.baja):"",p.motivoBaja||"",p.motivoDetalle||"",p.obs||""]));
+  return "﻿"+rows.map(r=>r.map(esc).join(";")).join("\r\n");
+}
+/* importar */
+let impData=null,xlsxP=null;
+function cargarXlsx(){
+  if(window.XLSX)return Promise.resolve(window.XLSX);if(xlsxP)return xlsxP;
+  xlsxP=new Promise((ok,ko)=>{const s=document.createElement("script");s.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";s.onload=()=>window.XLSX?ok(window.XLSX):ko(new Error("xlsx"));s.onerror=()=>{xlsxP=null;ko(new Error("xlsx"))};document.head.append(s)});
+  return xlsxP;
+}
+function parseCsv(txt){
+  txt=txt.replace(/^﻿/,"");const first=txt.split(/\r?\n/)[0]||"";const sep=(first.match(/;/g)||[]).length>=(first.match(/,/g)||[]).length?";":(first.includes("\t")?"\t":",");
+  const rows=[];let row=[],cur="",q=false;
+  for(let i=0;i<txt.length;i++){const c=txt[i];
+    if(q){if(c==='"'){if(txt[i+1]==='"'){cur+='"';i++}else q=false}else cur+=c}
+    else if(c==='"')q=true;else if(c===sep){row.push(cur);cur=""}else if(c==="\n"||c==="\r"){if(c==="\r"&&txt[i+1]==="\n")i++;row.push(cur);rows.push(row);row=[];cur=""}else cur+=c}
+  if(cur||row.length){row.push(cur);rows.push(row)}
+  return rows;
+}
+function colKey(h){
+  const n=normTxt(h).replace(/[°º.#:]/g," ").replace(/\s+/g," ").trim();if(!n)return null;
+  if(/serie/.test(n))return"serie";if(/fabric|marca/.test(n))return"fabricante";if(/juego/.test(n))return"juego";if(/modelo/.test(n))return"modelo";
+  if(/isla|posic|ubic/.test(n))return"ubicacion";if(/^sala|localidad/.test(n))return"sala";
+  if(/^(n|nro|num|numero|maq|maquina)\b|maquina|^egm/.test(n))return"numero";return null;
+}
+function salaDe(v){
+  const n=normTxt(v);if(!n)return -1;
+  if(/^[1-5]$/.test(n))return Number(n)-1;
+  const names=S.salas.map(normTxt);let i=names.indexOf(n);if(i>=0)return i;
+  if(n.length<4)return -1;
+  i=names.findIndex(x=>x.length>=4&&(x.includes(n)||n.includes(x)));return i;
+}
+function hojasARegistros(hojas){
+  const out=[],errs=[];
+  hojas.forEach(({nombre,filas})=>{
+    let hi=-1,map=null;
+    for(let r=0;r<Math.min(filas.length,15);r++){const m={};(filas[r]||[]).forEach((h,c)=>{const k=colKey(h);if(k&&m[k]==null)m[k]=c});if(m.numero!=null){hi=r;map=m;break}}
+    if(hi<0){if(filas.some(f=>f&&f.some(x=>String(x).trim())))errs.push("Hoja “"+nombre+"”: no encontré la columna del N° de máquina.");return}
+    const salaHoja=salaDe(nombre);
+    for(let r=hi+1;r<filas.length;r++){
+      const f=filas[r]||[];const g=k=>map[k]==null?"":String(f[map[k]]==null?"":f[map[k]]).trim();
+      const numero=g("numero").replace(/\.0$/,"");if(!numero&&!g("fabricante")&&!g("modelo"))continue;
+      const fila=(hojas.length>1?"Hoja “"+nombre+"”, fila ":"Fila ")+(r+1);
+      if(!numero){errs.push(fila+": falta el N° de máquina.");continue}
+      const sv=map.sala!=null?g("sala"):"";const sala=sv?salaDe(sv):salaHoja;
+      if(sala<0){errs.push(fila+" (N° "+numero+"): no reconozco la sala “"+(g("sala")||nombre)+"”.");continue}
+      let fab=g("fabricante");const fx=S.fabs.find(x=>x.toLowerCase()===fab.toLowerCase());if(fx)fab=fx;
+      let mod=g("modelo");const mx=modsDe(fab).find(x=>x.toLowerCase()===mod.toLowerCase());if(mx)mod=mx;
+      out.push({sala,numero,fabricante:fab,modelo:mod,juego:g("juego"),ubicacion:g("ubicacion"),serie:g("serie")});
+    }
+  });
+  return {out,errs};
+}
+function impPreview(){
+  const R=$("impRes");R.innerHTML="";R.hidden=false;const go=$("impGo");
+  if(!impData){R.hidden=true;go.disabled=true;return}
+  const {out,errs}=impData;const seen=new Set(),nuevos=[],ya=[],rep=[];
+  out.forEach(x=>{const k=x.sala+"|"+x.numero.toLowerCase();if(seen.has(k)){rep.push(x);return}seen.add(k);if(dupPad(x.sala,x.numero))ya.push(x);else nuevos.push(x)});
+  impData.nuevos=nuevos;
+  const t=el("table","imptbl"),hr=el("tr");["Sala","A importar","Ya estaban"].forEach(h=>hr.append(el("th",null,h)));t.append(hr);
+  S.salas.forEach((n,i)=>{const a=nuevos.filter(x=>x.sala===i).length,b=ya.filter(x=>x.sala===i).length;if(!a&&!b)return;const tr=el("tr");tr.append(el("td",null,n),el("td",null,String(a)),el("td",null,String(b)));t.append(tr)});
+  R.append(el("h3",null,"Vista previa"),t);
+  const fabsN=[...new Set(nuevos.map(x=>x.fabricante).filter(f=>f&&!S.fabs.some(y=>y.toLowerCase()===f.toLowerCase())))];
+  if(fabsN.length)R.append(el("p","muted","Fabricantes nuevos que se agregan a la lista: "+fabsN.join(", ")+"."));
+  if(rep.length)R.append(el("p","muted",rep.length+" filas repetidas dentro del archivo (misma sala y N°) se saltean."));
+  if(errs.length){R.append(el("p","muted",errs.length+(errs.length===1?" fila no se puede importar:":" filas no se pueden importar:")));const u=el("div","hist");errs.slice(0,10).forEach(e=>u.append(el("div",null,e)));if(errs.length>10)u.append(el("div",null,"…y "+(errs.length-10)+" más."));R.append(u)}
+  go.disabled=!nuevos.length;go.textContent=nuevos.length?"Importar "+nuevos.length+(nuevos.length===1?" máquina":" máquinas"):"Nada para importar";
+}
+$("impFile").addEventListener("change",async e=>{
+  const f=e.target.files&&e.target.files[0];impData=null;impPreview();if(!f)return;
+  const R=$("impRes");R.hidden=false;R.textContent="Leyendo el archivo…";
+  try{
+    let hojas;
+    if(/\.csv$/i.test(f.name)){hojas=[{nombre:f.name.replace(/\.csv$/i,""),filas:parseCsv(await f.text())}]}
+    else{let X;try{X=await cargarXlsx()}catch(err){R.textContent="No se pudo abrir el Excel desde esta vista. Guardalo como CSV (Archivo › Guardar como › CSV) y subí ese archivo.";return}
+      const wb=X.read(await f.arrayBuffer(),{type:"array"});hojas=wb.SheetNames.map(n=>({nombre:n,filas:X.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:"",raw:false})}))}
+    impData=hojasARegistros(hojas);
+    if(!impData.out.length&&!impData.errs.length){R.textContent="El archivo no tiene filas con máquinas.";impData=null;return}
+    impPreview();
+  }catch(err){impData=null;R.textContent="No se pudo leer el archivo. Revisá que sea un Excel o CSV válido."}
+});
+$("impGo").onclick=async()=>{
+  if(!impData||!impData.nuevos||!impData.nuevos.length||!puedeEditPad())return;
+  const L=impData.nuevos,go=$("impGo");go.disabled=true;$("impFile").disabled=true;
+  const now=Date.now(),nombre=await miNombre();
+  const fabsN=[...new Set(L.map(x=>x.fabricante).filter(f=>f&&!S.fabs.some(y=>y.toLowerCase()===f.toLowerCase())))];
+  if(fabsN.length){try{const nombres=sortFabs([...S.fabs,...fabsN]);await db.doc("config/fabricantes").set({nombres});S.fabs=nombres}catch(e){}}
+  const modsN=[];L.forEach(x=>{if(x.fabricante&&x.modelo&&!S.modelos.some(y=>y.f.toLowerCase()===x.fabricante.toLowerCase()&&y.m.toLowerCase()===x.modelo.toLowerCase())&&!modsN.some(y=>y.f===x.fabricante&&y.m.toLowerCase()===x.modelo.toLowerCase()))modsN.push({f:x.fabricante,m:x.modelo})});
+  if(modsN.length){try{const lista=[...S.modelos,...modsN];await db.doc("config/modelos").set({lista});S.modelos=lista}catch(e){}}
+  let ok=0;
+  for(let i=0;i<L.length;i+=10){
+    const r=await Promise.allSettled(L.slice(i,i+10).map(x=>db.collection("padron").doc().set(Object.assign({},x,{estado:"activa",alta:now,creado:now,creadoPor:S.uid,altaNombre:nombre,actualizado:now,actualizadoPor:S.uid,obs:"",historial:[{t:now,accion:"importada",nombre}]}))));
+    ok+=r.filter(y=>y.status==="fulfilled").length;go.textContent="Importando… "+ok+" de "+L.length;
+  }
+  $("impFile").disabled=false;$("impFile").value="";impData=null;$("ovImp").hidden=true;go.textContent="Importar";
+  toast(ok===L.length?("Padrón importado: "+ok+" máquinas"):("Se importaron "+ok+" de "+L.length+". Volvé a subir el archivo para cargar el resto."));
+};
+$("btnImp").onclick=()=>{impData=null;$("impFile").value="";$("impFile").disabled=false;$("impGo").textContent="Importar";impPreview();$("ovImp").hidden=false};
+$("impPlantilla").onclick=async()=>{
+  if(!downloads){toast("La descarga no está disponible en esta vista.");return}
+  const rows=[["Sala","N° máquina","Fabricante","Modelo","Juego","Isla / posición","N° de serie"]];S.salas.forEach(n=>rows.push([n,"","","","","",""]));
+  try{await downloads.save({filename:"padron-planilla-modelo.csv",data:"﻿"+rows.map(r=>r.join(";")).join("\r\n")})}catch(e){if(e&&e.code!=="declined")toast("No se pudo descargar la planilla.")}
+};
+const closeImp=()=>{if(!$("impFile").disabled)$("ovImp").hidden=true};
+$("impCerrar").onclick=closeImp;$("impCancel").onclick=closeImp;
+$("ovImp").addEventListener("click",e=>{if(e.target.id==="ovImp")closeImp()});
+
+/* --- arranque --- */
+/* --- arranque (Firebase) --- */
+let nomAlta="";
+const miNombreAuth=u=>u.displayName||nomAlta||String(u.email||"").split("@")[0]||"";
+async function registrarVisita(u){
+  const nombre=miNombreAuth(u).slice(0,80),foto=u.photoURL&&u.photoURL.length<=500?u.photoURL:"";
+  try{await db.doc("perfiles/"+S.uid).set({nombre,foto})}catch(e){}
+  try{await db.doc("visitas/"+S.uid).set({visto:Date.now(),nombre,email:u.email||""})}catch(e){}
+}
+$("codeForm").addEventListener("submit",async e=>{
+  e.preventDefault();const c=normCode($("codeIn").value);if(c.length<6){toast("El código tiene 6 caracteres, por ejemplo K7Q-2MX.");return}
+  const h=await hashCode(c);
+  try{
+    const sn=await db.doc("codigos/"+h).get();
+    if(!sn.exists){toast("Ese código no es válido. Revisalo o pedile uno nuevo al administrador general.");return}
+    const p=sn.data();
+    await db.doc("usuarios/"+S.uid).set({h,pid:p.pid||"",nombre:p.nombre||"",rol:p.rol,sala:p.sala==null?null:p.sala,salas:p.salas||[]});
+    $("codeIn").value="";toast("Listo, quedaste vinculado como "+ROLES[p.rol]+(p.sala!=null?" de "+salaName(p.sala):""));
+  }catch(err){toast("No se pudo vincular. Revisá el código y la conexión, e intentá de nuevo.")}
+});
+$("bootGo").onclick=async()=>{
+  try{await db.doc("config/general").set({uids:[S.uid]});toast("Listo: sos el administrador general")}
+  catch(e){toast("No se pudo. Puede que ya haya un administrador general.")}
+};
+
+/* suscripciones: los perfiles de sala solo piden (y solo pueden leer) los datos de sus salas */
+let unsubs=[];
+const docsOf=s=>s.docs.map(d=>Object.assign({id:d.id},d.data()));
+function sub(col,salas,cb,err){
+  const ko=err||(()=>{});
+  if(!salas){unsubs.push(db.collection(col).onSnapshot(s=>cb(docsOf(s)),ko));return}
+  const parts={};
+  salas.forEach(n=>unsubs.push(db.collection(col).where("sala","==",n).onSnapshot(s=>{parts[n]=docsOf(s);cb(salas.flatMap(k=>parts[k]||[]))},ko)));
+}
+function subData(){
+  unsubs.forEach(u=>{try{u()}catch(e){}});unsubs=[];padSub=false;
+  const r=rol();if(r==="cargando")return;
+  if(r==="sinasig"||(deSala(r)&&!miSalas().length)){
+    S.maq=[];S.sec=[];S.rq=[];S.inf=[];S.pad=[];S.ready=true;
+    $("live").classList.add("off");$("liveTxt").textContent="Sin perfil asignado";return;
+  }
+  const salas=deSala(r)?miSalas():null;
+  unsubs.push(db.doc("config/salas").onSnapshot(s=>{if(s.exists){const n=s.data().nombres||[];if(Array.isArray(n)&&n.length===5){S.salas=n.map((x,i)=>String(x||("Sala "+(i+1))));fillSalaSelect();applyRol();renderAll();renderUsr()}}},()=>{}));
+  unsubs.push(db.doc("config/alertas").onSnapshot(s=>{if(s.exists){const d=s.data();S.al={maq:Number(d.maq)||5,dias:Number(d.dias)||10};renderAll()}},()=>{}));
+  unsubs.push(db.doc("config/modelos").onSnapshot(s=>{if(s.exists){const l=s.data().lista;if(Array.isArray(l))S.modelos=l.filter(x=>x&&x.f&&x.m)}},()=>{}));
+  unsubs.push(db.doc("config/fabricantes").onSnapshot(s=>{if(s.exists){const n=s.data().nombres;if(Array.isArray(n))S.fabs=sortFabs(n)}},()=>{}));
+  unsubs.push(db.collection("perfiles").onSnapshot(s=>{const m={};s.docs.forEach(d=>{const x=d.data()||{};m[d.id]={name:x.nombre||"",avatarUrl:x.foto||""}});S.perf=m;renderList();renderUsr()},()=>{}));
+  sub("secundarias",salas,L=>{S.sec=L;renderAll();renderRep()});
+  sub("informes",salas,L=>{S.inf=L;renderAll();if(!$("ov").hidden&&S.editId){const m=S.maq.find(x=>x.id===S.editId);if(m)renderInfBox(m)}if(!$("ovSec").hidden&&secEdit){const x=S.sec.find(y=>y.id===secEdit.id)||secEdit;renderSecInfBox(x)}});
+  sub("repuestos",salas,L=>{S.rq=L;renderAll()});
+  sub("maquinas",salas,L=>{
+    S.maq=L;S.ready=true;
+    $("live").classList.remove("off");$("liveTxt").textContent="En vivo · "+new Date().toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"});
+    renderAll();renderRep();
+  },()=>{$("live").classList.add("off");$("liveTxt").textContent="Sin conexión o sin permiso, recargá la página";S.ready=true;renderAll()});
+}
+let adminSub=false;
+function subAdmin(){
+  if(adminSub||!S.general)return;adminSub=true;
+  db.collection("usuarios").onSnapshot(s=>{const all={},asig={};s.docs.forEach(d=>{const x=d.data()||{};all[d.id]=x;if(!x.h)asig[d.id]=x});S.usrAll=all;S.asig=asig;renderUsr()},()=>{adminSub=false});
+  db.collection("codigos").onSnapshot(s=>{S.personas=s.docs.map(d=>Object.assign({},d.data(),{h:d.id})).filter(p=>p.nombre);renderUsr()},()=>{});
+  db.collection("visitas").onSnapshot(s=>{S.visitas=s.docs.map(d=>{const x=d.data()||{};return{id:d.id,visto:Number(x.visto)||0,nombre:x.nombre||"",email:x.email||""}});renderUsr()},()=>{});
+  db.doc("config/ocultos").onSnapshot(s=>{const a=s.exists?s.data().ids:null;S.ocultos=Array.isArray(a)?a:[];renderUsr()},()=>{});
+}
+function boot(u){
+  db=firebase.firestore();S.uid=u.uid;
+  user={profiles:async ids=>{const o={};ids.forEach(i=>{if(S.perf[i])o[i]=S.perf[i]});return o},me:async()=>({name:miNombreAuth(u)})};
+  downloads={save:async({filename,data})=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data],{type:"text/csv;charset=utf-8"}));a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000)}};
+  $("btnCsv").hidden=false;$("btnSalir").hidden=false;$("btnSalir").title="Cerrar la sesión de "+(u.email||miNombreAuth(u));
+  $("liveTxt").textContent="Conectando…";
+  registrarVisita(u);
+  db.doc("config/general").onSnapshot(s=>{
+    const ids=s.exists&&Array.isArray(s.data().uids)?s.data().uids:[];
+    S.generales=ids;S.sinGeneral=!s.exists;S.general=ids.includes(S.uid);S.genLoaded=true;subAdmin();applyRol();renderAll();
+  },()=>{S.genLoaded=true;applyRol();renderAll()});
+  db.doc("usuarios/"+S.uid).onSnapshot(s=>{S.miUsr=s.exists?s.data():null;S.asigLoaded=true;applyRol();renderAll()},()=>{S.asigLoaded=true;applyRol();renderAll()});
+}
+
+/* inicio de sesión */
+const AUTH_ERR={"auth/invalid-credential":"Mail o contraseña incorrectos.","auth/wrong-password":"Mail o contraseña incorrectos.","auth/user-not-found":"No hay una cuenta con ese mail. Tocá “Crear cuenta nueva”.","auth/email-already-in-use":"Ya existe una cuenta con ese mail. Ingresá con tu contraseña.","auth/weak-password":"La contraseña tiene que tener 6 caracteres o más.","auth/invalid-email":"Ese mail no parece válido.","auth/missing-password":"Escribí la contraseña.","auth/unauthorized-domain":"Falta autorizar este sitio en Firebase (guía, parte 3, paso 4).","auth/operation-not-allowed":"Ese método de ingreso no está activado en Firebase (guía, parte 1, paso 3).","auth/popup-blocked":"El navegador bloqueó la ventana de Google. Permití las ventanas emergentes e intentá de nuevo.","auth/network-request-failed":"Sin conexión. Revisá internet e intentá de nuevo.","auth/too-many-requests":"Demasiados intentos. Esperá unos minutos."};
+function lgErr(e){const c=e&&e.code;if(c==="auth/popup-closed-by-user"||c==="auth/cancelled-popup-request")return;toast(AUTH_ERR[c]||"No se pudo ingresar. Intentá de nuevo.")}
+let lgAlta=false;
+$("lgModo").onclick=()=>{lgAlta=!lgAlta;$("lgNomBox").hidden=!lgAlta;$("lgT").textContent=lgAlta?"Crear cuenta con mail y contraseña":"O con mail y contraseña";$("lgGo").textContent=lgAlta?"Crear cuenta":"Ingresar";$("lgModo").textContent=lgAlta?"Ya tengo cuenta":"Crear cuenta nueva";$("lgPass").autocomplete=lgAlta?"new-password":"current-password"};
+$("lgGoogle").onclick=async()=>{if(!auth)return;try{await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())}catch(e){lgErr(e)}};
+$("lgForm").addEventListener("submit",async e=>{
+  e.preventDefault();if(!auth)return;
+  const mail=$("lgMail").value.trim(),pass=$("lgPass").value,nom=$("lgNom").value.trim();
+  if(!mail){$("lgMail").focus();toast("Escribí tu mail.");return}
+  if(lgAlta&&!nom){$("lgNom").focus();toast("Escribí tu nombre y apellido.");return}
+  const go=$("lgGo");go.disabled=true;
+  try{
+    if(lgAlta){nomAlta=nom;const c=await auth.createUserWithEmailAndPassword(mail,pass);try{await c.user.updateProfile({displayName:nom})}catch(x){}}
+    else await auth.signInWithEmailAndPassword(mail,pass);
+  }catch(err){lgErr(err)}
+  go.disabled=false;
+});
+$("lgReset").onclick=async()=>{
+  const mail=$("lgMail").value.trim();if(!mail){$("lgMail").focus();toast("Escribí tu mail y volvé a tocar el botón.");return}
+  try{await auth.sendPasswordResetEmail(mail);toast("Si ese mail tiene cuenta, te llega un correo para cambiar la contraseña.")}catch(e){lgErr(e)}
+};
+$("btnSalir").onclick=()=>{if(!auth)return;const b=$("btnSalir");b.disabled=true;b.textContent="Saliendo…";const fin=()=>location.reload();setTimeout(fin,4000);auth.signOut().then(fin,fin)};
+
+/* --- datos de prueba (inventados; solo administrador general) --- */
+const DEMO_COLS=["maquinas","secundarias","repuestos","informes","padron"];
+$("demoGo").onclick=async()=>{
+  if(rol()!=="general")return;
+  if(S.maq.some(m=>m.demo)||S.pad.some(p=>p.demo)){toast("Los datos de prueba ya están cargados.");return}
+  const go=$("demoGo");go.disabled=true;$("demoInfo").textContent="Cargando…";
+  const now=Date.now(),D=864e5,H=36e5,uid=S.uid,b=db.batch();
+  const fabs=DEFAULT_FABS,mods=["Gabinete A","Gabinete B","Gabinete C"],juegos=["Juego Demo Uno","Juego Demo Dos","Juego Demo Tres"];
+  const P=[];
+  for(let s=0;s<5;s++)for(let k=0;k<8;k++){
+    const p={sala:s,numero:String((s+1)*1000+k+1),fabricante:fabs[(s*3+k)%fabs.length],modelo:mods[k%3],juego:juegos[(s+k)%3],ubicacion:"Isla "+(Math.floor(k/4)+1)+" · pos. "+(k%4+1),serie:"DEMO-"+(s+1)+"-"+String(k+1).padStart(3,"0"),obs:"",estado:"activa",alta:now-200*D,creado:now,creadoPor:uid,altaNombre:"Datos de prueba",actualizado:now,actualizadoPor:uid,historial:[{t:now,accion:"importada",nombre:"Datos de prueba"}],demo:true};
+    P.push(p);b.set(db.collection("padron").doc(),p);
+  }
+  const de=(s,k)=>P[s*8+k];
+  const maq=(p,falla,detalle,estado,dias,extra)=>{
+    const creado=now-dias*D,ref=db.collection("maquinas").doc();
+    const hist=[{t:creado,estado:"fs",por:uid}];if(estado!=="fs")hist.push({t:creado+3*H,estado:"rep",por:uid});
+    const d=Object.assign({sala:p.sala,numero:p.numero,fabricante:p.fabricante,modelo:p.modelo,ubicacion:p.ubicacion,falla,detalle,estado,tecnico:estado==="fs"?"":"Técnico Demo",obs:"",diagnostico:"",procedimiento:"",repuesto:"",sinRepuesto:false,creado,creadoPor:uid,actualizado:creado+3*H,actualizadoPor:uid,historial:hist,demo:true},extra||{});
+    if(estado==="ok"){d.historial=[...hist,{t:d.reparada,estado:"ok",por:uid}];d.actualizado=d.reparada}
+    b.set(ref,d);return ref.id;
+  };
+  const rep=(dias,diag,repu)=>({reparada:now-dias*D,confirmadoPor:uid,confirmadoNombre:"Asistente Demo",reparadoPorTecnico:"Técnico Demo",diagnostico:diag,procedimiento:"1. Se revisó la máquina\n2. Se corrigió la falla\n3. Se probó con ticket de prueba",repuesto:repu||"",sinRepuesto:!repu});
+  const mInf=maq(de(0,0),"Billetero","No acepta billetes (dato de prueba)","rep",2);
+  maq(de(0,1),"Pantalla / touch","Touch sin respuesta en la mitad derecha","fs",0.3);
+  maq(de(0,5),"Impresora de tickets","Atasco de papel","ok",6,rep(5,"Rodillo de la impresora sucio",""));
+  maq(de(1,2),"Sin energía","No enciende","fs",14);
+  maq(de(1,3),"Botonera","Botón de apuesta máxima trabado","rep",4);
+  maq(de(1,6),"Comunicación / sistema","Sin enlace con el sistema","ok",9,rep(7,"Cable de red dañado","Cable de red"));
+  maq(de(2,0),"Impresora de tickets","No imprime tickets","fs",1);
+  [1,2,3,4,5].forEach((k,i)=>maq(de(3,k),FALLAS[i],"Falla de prueba "+(i+1),i%2?"rep":"fs",1+i));
+  maq(de(3,6),"Error de juego / RAM","Error al iniciar el juego","fs",0.1);
+  maq(de(4,4),"Puerta / cerradura","La puerta principal no cierra","rep",3);
+  b.set(db.collection("informes").doc(),{maquinaId:mInf,sala:0,numero:de(0,0).numero,horaReparacion:now-2*H,trabajo:"1. Se desarmó el billetero\n2. Se limpiaron los sensores\n3. Se probó con billetes",repuesto:"",sinRepuesto:true,tecnicoNombre:"Técnico Demo",por:uid,creado:now-H,estado:"pendiente",demo:true});
+  const sec=(p,tipo,detalle,dias,ok)=>b.set(db.collection("secundarias").doc(),Object.assign({sala:p.sala,numero:p.numero,fabricante:p.fabricante,modelo:p.modelo,ubicacion:p.ubicacion,tipo,detalle,estado:ok?"ok":"pend",creado:now-dias*D,creadoPor:uid,creadoNombre:"Asistente Demo",actualizado:now-dias*D,actualizadoPor:uid,demo:true},ok?{solucionada:now-D,solucionadoPor:uid,solucionadoNombre:"Técnico Demo",confirmadoPor:uid,confirmadoNombre:"Asistente Demo"}:{}));
+  sec(de(0,3),"Iluminación / LED","Tira LED lateral apagada",5);
+  sec(de(1,7),"Topper / cartel","Cartel superior sin luz",12);
+  sec(de(2,4),"Silla / asiento","Asiento flojo",2);
+  sec(de(4,1),"Cerradura","Cerradura del gabinete inferior dura",8,true);
+  const rq=(p,tipo,detalle,estado,dias,urgente,extra)=>b.set(db.collection("repuestos").doc(),Object.assign({sala:p.sala,numero:p.numero,maquinaId:null,tipo,cantidad:1,urgente,detalle,estado,nota:"",tecnicoNombre:"Técnico Demo",solicitadoPor:uid,creado:now-dias*D,actualizado:now-dias*D,actualizadoPor:uid,historial:[{t:now-dias*D,estado:"pendiente",por:uid,nombre:"Técnico Demo"}],demo:true},extra||{}));
+  rq(de(0,0),"Billetero / validador","Validador de reemplazo","pendiente",1,true);
+  rq(de(1,2),"Fuente de alimentación","Fuente quemada","enviado",5,false,{envio:{fecha:now-D,medio:"Transporte de prueba",remito:"R-0001",nota:"",por:uid,nombre:"Supervisor Demo",actualizado:now-D}});
+  rq(de(1,6),"Cables / conectores","Cable de red","entregado",9,false);
+  b.set(db.doc("config/fabricantes"),{nombres:sortFabs([...S.fabs,...fabs])});
+  b.set(db.doc("config/modelos"),{lista:[...S.modelos,...fabs.flatMap(f=>mods.map(m=>({f,m}))).filter(x=>!S.modelos.some(y=>y.f===x.f&&y.m===x.m))]});
+  try{await b.commit();$("demoInfo").textContent="";toast("Datos de prueba cargados")}
+  catch(e){$("demoInfo").textContent="";toast("No se pudieron cargar los datos de prueba.")}
+  go.disabled=false;
+};
+$("demoDel").onclick=async()=>{
+  if(rol()!=="general")return;const bt=$("demoDel");
+  if(bt.dataset.c!=="1"){bt.dataset.c="1";bt.textContent="¿Borrar los datos de prueba?";setTimeout(()=>{bt.dataset.c="";bt.textContent="Borrar datos de prueba"},4000);return}
+  bt.dataset.c="";bt.textContent="Borrar datos de prueba";bt.disabled=true;let n=0;
+  try{
+    for(const c of DEMO_COLS){
+      const s=await db.collection(c).where("demo","==",true).get();
+      for(let i=0;i<s.docs.length;i+=400){const b=db.batch();s.docs.slice(i,i+400).forEach(d=>b.delete(d.ref));await b.commit()}
+      n+=s.docs.length;$("demoInfo").textContent="Borrando… "+n;
+    }
+    toast(n?("Se borraron "+n+" registros de prueba"):"No había datos de prueba para borrar");
+  }catch(e){toast("No se pudieron borrar todos los datos de prueba. Intentá de nuevo.")}
+  $("demoInfo").textContent="";bt.disabled=false;
+};
+
+renderAll();
+function start(){
+  const c=typeof FIREBASE_CONFIG==="object"?FIREBASE_CONFIG:null;
+  if(!window.firebase||!c||!c.apiKey||/PEGAR/.test(c.apiKey)||/PEGAR/.test(c.projectId||"")){
+    $("liveTxt").textContent="Falta configurar Firebase";
+    $("emptyT").textContent=window.firebase?"Falta pegar la configuración de Firebase":"No se pudo cargar Firebase";
+    $("emptyP").textContent=window.firebase?"Editá index.html, buscá FIREBASE_CONFIG (arriba de todo) y reemplazá los PEGAR_AQUI por los datos de tu proyecto.":"Revisá la conexión a internet y recargá la página.";
+    return;
+  }
+  firebase.initializeApp(c);auth=firebase.auth();
+  let booted=false;
+  auth.onAuthStateChanged(u=>{
+    /* si la sesión se cierra o cambia de usuario (por ejemplo, desde otra pestaña del mismo navegador), se recarga */
+    if(booted&&(!u||u.uid!==S.uid)){location.reload();return}
+    if(!u){$("ovLogin").hidden=false;$("liveTxt").textContent="Iniciá sesión para ver el tablero";return}
+    $("ovLogin").hidden=true;if(!booted){booted=true;boot(u)}
+  });
+}
+start();
+setInterval(()=>{if(S.ready&&$("ov").hidden)renderList()},60000);
+})();
+</script>
+
+</body></html>
